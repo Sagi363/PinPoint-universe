@@ -19,4 +19,5 @@ Non-markdown artifacts (HTML prototypes, images, PDFs) live alongside the markdo
 ## Current Artifacts
 
 - [build-mobile/pinpoint/research-indoor-positioning.md](build-mobile/pinpoint/research-indoor-positioning.md) — Indoor positioning feasibility research (PDR, VIO, calibration)
+- [build-mobile/pinpoint/viewer-atlas-research.md](build-mobile/pinpoint/viewer-atlas-research.md) — Forma 2D viewer code-grounded reference (Atlas agent's knowledge base)
 - [build-mobile/pinpoint/walkthrough-prototype.html](build-mobile/pinpoint/walkthrough-prototype.html) — ACC Walkthrough v0.25 — interactive HTML prototype of the Punch Walk auto-pin flow
