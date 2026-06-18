@@ -1,0 +1,1845 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0b0c10" />
+<title>ACC Walkthrough · v0.25</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  window.__pdfjsReady = false;
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    window.__pdfjsReady = true;
+  }
+</script>
+<style>
+  :root {
+    --bg: #0b0c10;
+    --surface: #15171c;
+    --surface-2: #1d2027;
+    --surface-3: #262932;
+    --border: #2a2d36;
+    --text: #e8eaed;
+    --text-dim: #9aa0a6;
+    --primary: #5b8def;
+    --primary-hover: #7aa3ff;
+    --success: #22c55e;
+    --success-hover: #2bd16d;
+    --danger: #ef4444;
+    --warn: #f7b32d;
+    --accent: #8b5cf6;
+    --shadow-sm: 0 2px 6px rgba(0,0,0,0.25);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+    --shadow-lg: 0 10px 28px rgba(0,0,0,0.5);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+    user-select: none;
+    font-feature-settings: "tnum" 1, "ss01" 1;
+  }
+  #app { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ---------- Toolbar (compact) ---------- */
+  #toolbar {
+    background: linear-gradient(180deg, rgba(21,23,28,0.96), rgba(15,17,22,0.96));
+    -webkit-backdrop-filter: blur(12px);
+    backdrop-filter: blur(12px);
+    padding: 6px 8px;
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+    z-index: 10;
+  }
+  #brand { display: flex; align-items: center; gap: 6px; padding-right: 4px; }
+  #brand .logo {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    display: grid; place-items: center;
+    color: white; font-size: 12px; font-weight: 800;
+    box-shadow: 0 2px 8px rgba(91,141,239,0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
+    letter-spacing: -0.5px;
+  }
+  #brand .name {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.1px; color: var(--text);
+    white-space: nowrap;
+    display: none; /* hidden on narrow screens; shown on wider ones */
+  }
+  @media (min-width: 640px) { #brand .name { display: block; } }
+  #brand .version {
+    font-size: 9px; font-weight: 700;
+    padding: 2px 6px; border-radius: 999px;
+    background: rgba(91,141,239,0.15);
+    color: var(--primary);
+    border: 1px solid rgba(91,141,239,0.3);
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+  }
+
+  #toolbar button {
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 7px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: transform 0.08s ease, background 0.15s ease, opacity 0.15s ease;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.08) inset, var(--shadow-sm);
+  }
+  #toolbar button:hover { background: var(--primary-hover); }
+  #toolbar button:active { transform: scale(0.96); }
+  #toolbar button:disabled {
+    background: var(--surface-2); color: var(--text-dim);
+    cursor: not-allowed; box-shadow: none; transform: none;
+  }
+  #toolbar button.ghost {
+    background: var(--surface-2); color: var(--text);
+    border: 1px solid var(--border); box-shadow: none;
+  }
+  #toolbar button.ghost:hover { background: var(--surface-3); }
+  #toolbar button.ghost.active {
+    background: var(--primary); color: white; border-color: transparent;
+    box-shadow: 0 0 0 2px rgba(91,141,239,0.3), var(--shadow-sm);
+  }
+  #toolbar button.icon {
+    padding: 6px 8px; min-width: 30px;
+    font-size: 13px;
+  }
+  #toolbar input[type="file"] {
+    font-size: 10px; color: var(--text-dim); max-width: 110px;
+  }
+  #toolbar input[type="file"]::-webkit-file-upload-button {
+    background: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 5px 8px;
+    border-radius: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 5px;
+  }
+  #toolbar .sep { width: 1px; height: 18px; background: var(--border); margin: 0 2px; }
+  #toolbar .spacer { flex: 1; min-width: 4px; }
+  #status {
+    font-size: 10px; color: var(--text-dim); padding: 0 4px;
+    font-family: ui-monospace, "SF Mono", "Menlo", monospace;
+    white-space: nowrap;
+  }
+
+  /* ---------- Canvas area ---------- */
+  #canvasWrap {
+    flex: 1; position: relative; overflow: hidden;
+    touch-action: none;
+    background:
+      radial-gradient(ellipse at center, #0e1015 0%, #07080b 100%);
+    cursor: grab;
+  }
+  #canvasWrap.dragging { cursor: grabbing; }
+  #sheet {
+    position: absolute; left: 0; top: 0;
+    transform-origin: 50% 50%;
+    user-select: none; pointer-events: none;
+    display: block;
+    background: white;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  #overlay { position: absolute; top: 0; left: 0; pointer-events: none; }
+
+  /* ---------- Guide pill ---------- */
+  #guide {
+    position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+    background: rgba(91,141,239,0.92);
+    -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+    color: white;
+    padding: 11px 18px;
+    border-radius: 12px;
+    font-size: 14px; font-weight: 600;
+    letter-spacing: 0.1px;
+    box-shadow: 0 8px 28px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.08) inset;
+    max-width: 92%;
+    text-align: center;
+    pointer-events: none;
+    transition: background 0.2s ease;
+  }
+  #guide.success { background: rgba(34,197,94,0.92); }
+  #guide.muted { background: rgba(40,42,50,0.92); }
+  #guide small {
+    display: block; font-weight: 400; font-size: 11px;
+    opacity: 0.85; margin-top: 4px; letter-spacing: 0;
+  }
+
+  /* ---------- Action pills (bottom-center) ---------- */
+  #actions {
+    position: absolute; bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px;
+    pointer-events: auto;
+  }
+  #actions button {
+    padding: 13px 22px;
+    border: none; border-radius: 999px;
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg), 0 1px 0 rgba(255,255,255,0.1) inset;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  #actions button:active { transform: scale(0.96); }
+  #actions button:disabled { opacity: 0.45; cursor: not-allowed; }
+  #actions .secondary {
+    background: linear-gradient(180deg, #4a4d57, #393b44);
+    color: white;
+  }
+  #actions .success {
+    background: linear-gradient(180deg, var(--success-hover), #1aa856);
+    color: white;
+  }
+
+  /* ---------- Info chip (top-left, moved up so it never covers the bottom buttons) ---------- */
+  #info {
+    position: absolute; top: 14px; left: 16px;
+    background: rgba(15,17,22,0.78);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+    padding: 7px 11px;
+    border-radius: 10px;
+    font-size: 10px;
+    line-height: 1.5;
+    font-family: ui-monospace, "SF Mono", monospace;
+    pointer-events: none;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    box-shadow: var(--shadow-sm);
+    max-width: calc(100% - 32px);
+  }
+  #info b { color: var(--warn); font-weight: 600; }
+  #info span { color: var(--text); }
+
+  /* ---------- "Pin here" FAB (bottom-right) ---------- */
+  #pinHereBtn {
+    position: absolute; bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+    right: 20px;
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--success-hover), #15a04d);
+    color: white; border: none;
+    font-size: 34px; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(34,197,94,0.4), 0 0 0 1px rgba(255,255,255,0.12) inset;
+    display: none; align-items: center; justify-content: center;
+    padding: 0; line-height: 1;
+    transition: transform 0.08s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+  }
+  #pinHereBtn.visible { display: flex; }
+  #pinHereBtn:active { transform: scale(0.92); }
+  #pinHereBtn:disabled {
+    background: #2c2f37; color: var(--text-dim);
+    cursor: not-allowed; box-shadow: var(--shadow-sm);
+  }
+
+  /* ---------- "Photo here" FAB (to the left of the pin FAB) ---------- */
+  #photoBtn {
+    position: absolute; bottom: calc(44px + env(safe-area-inset-bottom, 0px));
+    right: 92px;
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #3565d4);
+    color: white; border: none;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(91,141,239,0.4), 0 0 0 1px rgba(255,255,255,0.12) inset;
+    display: none; align-items: center; justify-content: center;
+    padding: 0; line-height: 1;
+    transition: transform 0.08s ease, box-shadow 0.15s ease;
+  }
+  #photoBtn.visible { display: flex; }
+  #photoBtn:active { transform: scale(0.92); }
+  #photoBtn:disabled {
+    background: #2c2f37; color: var(--text-dim);
+    cursor: not-allowed; box-shadow: var(--shadow-sm);
+  }
+
+  /* ---------- Diag (top-right) ---------- */
+  #diag {
+    position: absolute; top: 14px; right: 14px;
+    background: rgba(15,17,22,0.85);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    color: #6ee784;
+    padding: 5px 10px; border-radius: 8px;
+    font-size: 10px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    max-width: 240px;
+    word-break: break-word;
+    pointer-events: none;
+    border: 1px solid var(--border);
+  }
+  #diag.err { color: #ff8b8b; border-color: rgba(239,68,68,0.4); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="toolbar">
+    <div id="brand">
+      <div class="logo">A</div>
+      <div class="name">ACC Walkthrough</div>
+      <div class="version" id="versionChip">v0.25</div>
+    </div>
+    <input type="file" id="fileInput" accept="image/*,application/pdf,.pdf" />
+    <button id="resetBtn" class="icon ghost" title="Reset walk">↺</button>
+    <button id="permBtn">Motion</button>
+    <span class="sep"></span>
+    <button id="fitBtn" class="icon ghost" title="Fit to screen">⊡</button>
+    <button id="followBtn" class="icon ghost" title="Lock view to my position">🎯</button>
+    <button id="headingUpBtn" class="icon ghost" title="Heading-up mode: rotate the sheet so my walking direction is always up">⬆</button>
+    <button id="flipDirBtn" class="icon ghost" title="Flip walking direction (if dot moves opposite to your real walk)">↺</button>
+    <button id="pcaToggleBtn" class="icon ghost" title="Walking-direction inference (PCA). Off by default — turn on only if compass heading is bad.">🧠</button>
+    <button id="stepDownBtn" class="icon ghost" title="Make each step shorter (−10%)">−px</button>
+    <button id="stepUpBtn" class="icon ghost" title="Make each step longer (+10%)">+px</button>
+    <button id="backwardBtn" class="icon ghost" title="I'm walking backward (invert heading 180°)">⇄</button>
+    <div class="spacer"></div>
+    <div id="status">No sensor data yet</div>
+  </div>
+  <div id="canvasWrap">
+    <canvas id="sheet"></canvas>
+    <canvas id="overlay"></canvas>
+    <div id="guide" class="muted">Load a floor plan to begin</div>
+    <div id="actions"></div>
+    <button id="photoBtn" title="Take a photo at your current location">📷</button>
+    <button id="pinHereBtn" title="Drop issue at current location">+</button>
+    <input type="file" id="photoInput" accept="image/*" capture="environment" hidden />
+    <div id="info">
+      <div><b>Steps:</b> <span id="stepCount">0</span> &nbsp; <b>Hdg:</b> <span id="heading">--</span>° &nbsp; <b>px/step:</b> <span id="scale">--</span> &nbsp; <b>Pins:</b> <span id="pinCount">0</span></div>
+      <div><b>Source:</b> <span id="headingSource">compass</span></div>
+    </div>
+    <div id="diag">init…</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ACC Walkthrough Prototype — v0.25
+//   • Unlimited calibration anchors (min 4 before tracking)
+//   • Mid-walk re-anchor refines step size + heading
+//   • Pinch to zoom AND rotate, drag to pan
+//   • FAB "+" drops issue at current estimated position
+// ============================================================
+
+const APP_VERSION = 'v0.25';
+
+// ---------- Remote telemetry ----------
+// Batches structured event records and POSTs them to /log on the dev server.
+// Read the resulting ~/Downloads/walkthrough-log.jsonl to diagnose what the
+// sensors actually saw during a test walk.
+const TELEMETRY_FLUSH_MS = 1000;
+const TELEMETRY_MAX_BATCH = 200;
+let telemetrySessionId = Math.random().toString(36).slice(2, 10);
+let telemetryQueue = [];
+let telemetryFlushTimer = null;
+
+function tlog(kind, payload) {
+  telemetryQueue.push({
+    t: Date.now(),
+    k: kind,
+    sid: telemetrySessionId,
+    v: APP_VERSION,
+    ...payload,
+  });
+  if (telemetryQueue.length >= TELEMETRY_MAX_BATCH) flushTelemetry();
+  else if (!telemetryFlushTimer) {
+    telemetryFlushTimer = setTimeout(flushTelemetry, TELEMETRY_FLUSH_MS);
+  }
+}
+
+async function flushTelemetry() {
+  if (telemetryFlushTimer) { clearTimeout(telemetryFlushTimer); telemetryFlushTimer = null; }
+  if (telemetryQueue.length === 0) return;
+  const batch = telemetryQueue;
+  telemetryQueue = [];
+  try {
+    // One POST per record keeps each JSONL line a single event; the batch
+    // exists to limit how many fire per frame, not to compose them server-side.
+    await Promise.all(batch.map((rec) => fetch('/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(rec),
+      keepalive: true,
+    })));
+  } catch (e) { /* swallow — telemetry must never block UI */ }
+}
+
+window.addEventListener('beforeunload', flushTelemetry);
+window.addEventListener('pagehide', flushTelemetry);
+
+window.addEventListener('error', (e) => {
+  const d = document.getElementById('diag');
+  if (d) { d.textContent = 'JS ERR: ' + (e.message||e.error) + ' @ ' + e.lineno; d.classList.add('err'); }
+});
+
+// ---------- Tunables ----------
+const STEP_PEAK_THRESHOLD = 1.6;     // m/s² on the world-vertical axis (was 1.2 on total magnitude)
+const STEP_MIN_INTERVAL_MS = 320;    // a bit higher to suppress double-detections
+const GRAVITY_LP_ALPHA = 0.05;        // gravity low-pass alpha (5% of new sample)
+const VERTICAL_LP_ALPHA = 0.15;       // vertical-accel low-pass alpha
+// Compass pull for the fused heading — applied once per orientation event.
+// Lower = gyro dominates short-term (smoother), higher = compass dominates (more wobble).
+// 0.02 means ~70% pull/sec at 60Hz orientation events.
+const COMPASS_PULL_ALPHA = 0.02;
+// Per-event hard cap on how far the compass can pull the fused heading. Stops
+// a single spurious sample (240° jump from steel/electronics interference)
+// from dragging the gyro-integrated heading.
+const COMPASS_PULL_MAX_DEG = 5;
+// Compass-quality detection — v0.25 simplified: track the max sample-to-sample
+// jump in the last QUALITY_WINDOW samples. Office telemetry showed jumps of
+// 50–147° (interference from steel/electronics) while the v0.21 circular std
+// computation was reading 0-7° due to a buggy formula. Direct jump detection
+// is robust and matches the observed failure signal.
+const COMPASS_QUALITY_WINDOW = 6;     // samples kept in the jump buffer
+const COMPASS_JUMP_BAD = 40;          // any jump above this in window → compass bad
+const COMPASS_JUMP_GOOD = 15;         // max jump in window must drop below this to recover
+const COMPASS_BAD_HOLD_MS = 5000;     // once flagged bad, stay bad for at least this long
+// SEPARATE smoothed heading used by applyStep for projecting step direction.
+// Now ADAPTIVE: the alpha scales with the compass rate of change so that
+// stable walks get heavy smoothing (filters out per-frame jitter) and active
+// turns get light smoothing (stepHeading tracks the new direction quickly).
+// Replaces the v0.16 approach of fixed-α smoothing + aggressive freeze, which
+// the v0.19 telemetry showed was eating ~35% of legitimate walking steps.
+const STEP_HEADING_ALPHA_SLOW = 0.008;  // when compass is stable
+const STEP_HEADING_ALPHA_FAST = 0.10;   // when compass is rotating
+const STEP_HEADING_RATE_LOW   = 5;      // °/s — below this use SLOW
+const STEP_HEADING_RATE_HIGH  = 40;     // °/s — above this use FAST (linear in between)
+// Turn-detection freeze: kept as a safety net for *actual* turns (~90°/s) but
+// thresholds raised so brief mid-walk compass spikes don't trigger it. v0.19
+// telemetry: real walking compass rate was 5–30°/s; 180° turn-arounds were
+// 80–120°/s. New thresholds sit between those bands.
+const TURN_RATE_THRESHOLD = 60;       // °/s — rate above this triggers a freeze
+const TURN_WINDOW_MS = 1000;
+const UNFREEZE_RATE = 25;             // °/s
+const UNFREEZE_HOLD_MS = 300;
+// PCA of horizontal acceleration in the world horizontal plane gives the
+// principal axis the user is oscillating along — i.e. their walking direction,
+// independent of phone orientation. Tunables:
+const ACCEL_BUFFER_SIZE = 90;      // ~1.5 s at 60 Hz
+const PCA_UPDATE_EVERY = 20;       // recompute roughly every 0.33 s
+const PCA_MIN_RATIO = 0.7;         // require dominant_λ / total_λ ≥ this before trusting
+const PCA_MIN_SAMPLES = 50;        // need at least this many in the buffer first
+const HEADING_UP_LERP = 0.10;      // per-frame lerp toward the heading-up rotation target
+// Recency weighting for calibration: each older anchor pair contributes this
+// fraction relative to the next-newer pair. 0.6 means the newest pair counts
+// roughly 1.66× the previous, 2.78× the one before, etc. Effect: an "I'm
+// actually here" correction dominates older walks, which is what we want
+// because the user is asserting present-tense ground truth.
+const CALIB_RECENCY_DECAY = 0.6;
+// Calibration ignores legs with fewer than this many steps. v0.23 telemetry
+// showed 2–3-step calibration legs producing nonsense pxPerStep (11-22, jumping
+// per leg) and unstable rotationOffset (jumping 70°+ per anchor). Real walking
+// legs of 10+ steps gave a clean, stable 11 px/step. So calibration now
+// requires a substantial walk to be considered valid.
+const MIN_LEG_STEPS_FOR_CAL = 5;
+// Normalized skewness above this magnitude is "strong enough" to trust for
+// forward/backward disambiguation; weaker → fall back to compass.
+const SKEWNESS_TRUST_THRESHOLD = 0.25;
+// If the user observes that auto-detected walking direction is consistently
+// flipped, toggle the "↺ flip walking direction" toolbar button to invert.
+// Stored on state for runtime override.
+const DEFAULT_STEP_PX = 40;
+const MIN_ANCHORS_FOR_CAL = 2;       // math kicks in and Done button appears
+const TAP_THRESHOLD_PX = 6;
+
+// ---------- State ----------
+const state = {
+  imgLoaded: false,
+  sheetW: 0, sheetH: 0,
+  mode: 'idle', // idle | awaitAnchor | tracking | awaitReanchor | awaitHeadingPoint | awaitHeadingConfirm
+
+  anchors: [],
+  pins: [],
+  currentPos: null,
+  path: [],
+
+  steps: 0,
+  heading: 0,          // smoothed (low-pass via circular EMA)
+  rawHeading: 0,       // most recent raw sample, for diagnostics
+  headingHasSample: false,
+  lastStepTime: 0,
+  accelSmoothed: 9.8,
+
+  pxPerStep: DEFAULT_STEP_PX,
+  rotationOffset: 0,
+  calibrated: false,
+
+  headingTarget: null, // image-space point chosen for compass calibration
+
+  // Per-step heading samples so the calibration can use the AVERAGE heading
+  // during each anchor segment, not just the heading at the moment of tap.
+  stepHeadings: [], // [{ step, heading }] heading in degrees, smoothed
+
+  // Gravity in device frame, low-passed so we can isolate vertical motion.
+  // Lateral phone swinging produces almost no vertical component, so this
+  // suppresses false-positive steps from side-to-side motion.
+  gravityVec: null,           // { x, y, z } in device frame, m/s²
+  verticalAccelSmoothed: 0,   // m/s² along world-vertical, low-passed
+
+  // Gyro+compass complementary filter. We integrate the world-yaw component of
+  // the gyroscope between motion events (drifts long-term but very smooth) and
+  // slowly pull the result toward the compass reading on each orientation event
+  // (jumpy short-term but globally accurate).
+  lastMotionTimeMs: null,     // for gyro integration dt
+
+  // When true, the view auto-recenters on currentPos every time it changes,
+  // so the user doesn't have to pan the sheet while walking. A manual pan
+  // automatically disables it; the toolbar 🎯 button toggles it back on.
+  followMode: true,
+
+  // Heading-up "drive" mode: when true, the sheet rotation lerps so that the
+  // user's walking direction (or compass heading when walking dir isn't
+  // confident enough) is always pointing up on screen.
+  headingUpMode: false,
+
+  // Walking-direction inference from horizontal-accel PCA. Filled in once we
+  // have enough samples AND the eigenvalue ratio passes PCA_MIN_RATIO; null
+  // otherwise (callers fall back to the compass heading).
+  accelBuf: [],         // ring of { east, north } horizontal accel samples in world frame, m/s²
+  accelBufIdx: 0,
+  accelBufFilled: 0,
+  pcaCounter: 0,
+  walkingHeading: null, // degrees clockwise from north, or null
+
+  // Manual override when gait skewness sign is wrong on the user's device.
+  // When true, the final disambiguation is inverted (chosen axis ↦ -axis).
+  walkingDirFlipped: false,
+
+  // When false, applyStep ignores the PCA inference and just uses the
+  // compass-fused heading. Default off because in practice PCA frequently
+  // grabs the lateral-sway axis (which is perpendicular to walking direction)
+  // and makes the dot move sideways. User can toggle with the 🧠 button.
+  pcaEnabled: false,
+
+  // Heavily-smoothed heading used only by applyStep, separate from state.heading.
+  stepHeading: 0,
+  stepHeadingHasSample: false,
+  // Sliding-window heading samples for turn-detection.
+  headingHistory: [],   // [{ t, heading }]
+  // True when recent heading rate-of-change exceeds TURN_RATE_THRESHOLD — i.e.
+  // the user is turning, not walking. applyStep skips position update while set.
+  headingUnstable: false,
+  // Timestamp when the rate first dropped below UNFREEZE_RATE while unstable.
+  // Used for hysteresis: must stay low for UNFREEZE_HOLD_MS before unfreezing.
+  unfreezeCandidateSinceMs: 0,
+
+  // Manual override for walking backward (body moves opposite to phone facing).
+  // When true, applyStep adds 180° to the heading used for projection. No
+  // amount of IMU smoothing can distinguish "walking forward facing N" from
+  // "walking backward facing S" — so this is a deliberate user assertion.
+  backwardWalking: false,
+
+  // Compass-quality tracking. recentRawCompass is a ring of recent raw samples,
+  // we compute the max sample-to-sample jump in it, and flag bad when it
+  // exceeds the BAD threshold. compassBadUntilMs holds the flag for at least
+  // COMPASS_BAD_HOLD_MS after the last detected jump so a brief calm window
+  // doesn't reactivate trust in a magnetically-bad room.
+  recentRawCompass: [],
+  compassBad: false,
+  compassBadUntilMs: 0,
+};
+
+const view = { scale: 1, rotation: 0, panX: 0, panY: 0 };
+
+// ---------- DOM ----------
+const dom = {
+  fileInput: document.getElementById('fileInput'),
+  resetBtn: document.getElementById('resetBtn'),
+  permBtn: document.getElementById('permBtn'),
+  fitBtn: document.getElementById('fitBtn'),
+  followBtn: document.getElementById('followBtn'),
+  headingUpBtn: document.getElementById('headingUpBtn'),
+  flipDirBtn: document.getElementById('flipDirBtn'),
+  pcaToggleBtn: document.getElementById('pcaToggleBtn'),
+  stepDownBtn: document.getElementById('stepDownBtn'),
+  stepUpBtn: document.getElementById('stepUpBtn'),
+  backwardBtn: document.getElementById('backwardBtn'),
+  pinHereBtn: document.getElementById('pinHereBtn'),
+  photoBtn: document.getElementById('photoBtn'),
+  photoInput: document.getElementById('photoInput'),
+  status: document.getElementById('status'),
+  sheet: document.getElementById('sheet'),
+  overlay: document.getElementById('overlay'),
+  wrap: document.getElementById('canvasWrap'),
+  guide: document.getElementById('guide'),
+  actions: document.getElementById('actions'),
+  stepCount: document.getElementById('stepCount'),
+  heading: document.getElementById('heading'),
+  scale: document.getElementById('scale'),
+  pinCount: document.getElementById('pinCount'),
+  headingSource: document.getElementById('headingSource'),
+  diag: document.getElementById('diag'),
+};
+const sheetCtx = dom.sheet.getContext('2d');
+const overlayCtx = dom.overlay.getContext('2d');
+
+function diag(msg, isError) {
+  dom.diag.textContent = msg;
+  dom.diag.classList.toggle('err', !!isError);
+}
+diag(window.__pdfjsReady ? `PDF.js ready · ${APP_VERSION}` : 'PDF.js NOT loaded', !window.__pdfjsReady);
+
+// ---------- Guide + actions UI ----------
+function setGuide(text, kind, sub) {
+  dom.guide.className = kind || '';
+  dom.guide.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
+}
+
+function setActions(buttons) {
+  dom.actions.innerHTML = '';
+  for (const b of buttons) {
+    const btn = document.createElement('button');
+    btn.textContent = b.label;
+    btn.className = b.cls || 'secondary';
+    if (b.disabled) btn.disabled = true;
+    btn.addEventListener('click', b.onClick);
+    dom.actions.appendChild(btn);
+  }
+}
+
+function updateUI() {
+  if (!state.imgLoaded) {
+    setGuide('Load a floor plan to begin', 'muted');
+    setActions([]);
+  } else if (state.mode === 'awaitAnchor') {
+    const n = state.anchors.length;
+    if (n === 0) setGuide('📍 Tap on the sheet where you are standing right now', '', `Pinch to zoom & rotate · WALK AT LEAST ${MIN_LEG_STEPS_FOR_CAL} STEPS between anchor taps for a usable calibration`);
+    else if (n < MIN_ANCHORS_FOR_CAL) setGuide(`🚶 Anchor ${n} placed. Walk a meaningful distance (≥${MIN_LEG_STEPS_FOR_CAL} steps) and tap your location again.`, '', 'Calibration ignores legs shorter than this — they\'re too noisy.');
+    else setGuide(`🧭 ${n} anchor${n>1?'s':''} — ${state.pxPerStep.toFixed(1)} px/step. Dot shows where I think you are. Walk and watch it.`, 'success', 'Tap "✓ Looks right" to start dropping pins, or tap your real location to correct.');
+
+    const actions = [];
+    if (state.anchors.length >= MIN_ANCHORS_FOR_CAL) {
+      actions.push({ label: '✓ Looks right — start tracking', cls: 'success', onClick: () => setMode('tracking') });
+    }
+    setActions(actions);
+  } else if (state.mode === 'tracking') {
+    setGuide('✅ Tracking active — tap the sheet OR use ⊕ to drop a pin', 'success',
+      `Calibration: ${state.pxPerStep.toFixed(1)} px/step · ${state.anchors.length} anchor${state.anchors.length>1?'s':''}`);
+    setActions([
+      { label: "📍 I'm actually here…", cls: 'secondary', onClick: () => setMode('awaitReanchor') },
+      { label: '🧭 Set heading', cls: 'secondary', onClick: () => setMode('awaitHeadingPoint') },
+      { label: '🗑 Clear pins', cls: 'secondary', onClick: () => { state.pins = []; updateUI(); draw(); }, disabled: state.pins.length === 0 },
+    ]);
+  } else if (state.mode === 'awaitReanchor') {
+    setGuide('📍 Tap on the sheet where you actually are now', '', 'Adds a calibration anchor and refines step size + heading');
+    setActions([
+      { label: 'Cancel', cls: 'secondary', onClick: () => setMode('tracking') },
+    ]);
+  } else if (state.mode === 'awaitHeadingPoint') {
+    setGuide('🧭 Tap a landmark on the sheet that you can see right now', '', 'Pick something you can physically point your phone at — door, column, window.');
+    setActions([
+      { label: 'Cancel', cls: 'secondary', onClick: () => setMode('tracking') },
+    ]);
+  } else if (state.mode === 'awaitHeadingConfirm') {
+    setGuide('📱 Now point your phone at that landmark, then tap Confirm', 'success', `Current heading: ${state.heading.toFixed(0)}° · this will recalibrate the compass-to-sheet offset.`);
+    setActions([
+      { label: '✓ Confirm direction', cls: 'success', onClick: confirmHeading },
+      { label: 'Cancel', cls: 'secondary', onClick: () => { state.headingTarget = null; setMode('tracking'); } },
+    ]);
+  }
+  dom.stepCount.textContent = state.steps;
+  dom.heading.textContent = state.heading.toFixed(0);
+  dom.scale.textContent = state.calibrated ? state.pxPerStep.toFixed(1) : '--';
+  dom.pinCount.textContent = state.pins.length;
+
+  // Show which source is feeding step direction, and whether the compass is
+  // currently in a turn (position updates frozen for incoming steps).
+  const usingWalking = state.pcaEnabled && state.walkingHeading != null;
+  let src = usingWalking
+    ? `walking ${state.walkingHeading.toFixed(0)}°${state.walkingDirFlipped ? ' (flipped)' : ''}`
+    : (state.pcaEnabled ? `step-hdg ${state.stepHeading.toFixed(0)}° (PCA waiting)` : `step-hdg ${state.stepHeading.toFixed(0)}°`);
+  if (state.backwardWalking) src += ' ⇄ BACKWARD';
+  if (state.headingUnstable) src += ' ⚠ TURNING';
+  if (state.compassBad) src += ' 🧲 GYRO-ONLY (compass bad)';
+  else if (state.mode === 'tracking') src += ' 🌀 GYRO-LOCKED';
+  dom.headingSource.textContent = src;
+
+  const fabVisible = state.mode === 'tracking' && state.imgLoaded;
+  dom.pinHereBtn.classList.toggle('visible', fabVisible);
+  dom.pinHereBtn.disabled = !state.currentPos;
+  dom.photoBtn.classList.toggle('visible', fabVisible);
+  dom.photoBtn.disabled = !state.currentPos;
+}
+
+function setMode(m) {
+  const prev = state.mode;
+  state.mode = m;
+  tlog('mode', { from: prev, to: m, anchors: state.anchors.length, steps: state.steps });
+  updateUI();
+  draw();
+}
+
+// ---------- Calibration ----------
+// Returns the circular mean (in radians) of all heading samples between
+// stepStart (exclusive) and stepEnd (inclusive). Falls back to fallbackDeg
+// when no samples were recorded (e.g. user calibrated without walking, or
+// motion permission wasn't granted).
+function segmentMeanHeading(stepStart, stepEnd, fallbackDeg) {
+  let sx = 0, sy = 0, n = 0;
+  for (const s of state.stepHeadings) {
+    if (s.step > stepStart && s.step <= stepEnd) {
+      const r = s.heading * Math.PI / 180;
+      sx += Math.cos(r); sy += Math.sin(r); n++;
+    }
+  }
+  if (n === 0) return fallbackDeg * Math.PI / 180;
+  return Math.atan2(sy / n, sx / n);
+}
+
+function recomputeCalibration() {
+  const a = state.anchors;
+  if (a.length < MIN_ANCHORS_FOR_CAL) { state.calibrated = false; return; }
+  const numPairs = a.length - 1;
+
+  // Find the most recent VALID leg (>= MIN_LEG_STEPS_FOR_CAL steps walked).
+  // Use it as the hard ground-truth for rotationOffset.
+  let rotUpdated = false;
+  for (let i = numPairs - 1; i >= 0; i--) {
+    const p0 = a[i], p1 = a[i+1];
+    const steps = p1.steps - p0.steps;
+    if (steps < MIN_LEG_STEPS_FOR_CAL) continue;
+    const dx = p1.x - p0.x, dy = p1.y - p0.y;
+    if (Math.hypot(dx, dy) < 1) continue;
+    const sheetAngle = Math.atan2(dy, dx);
+    const imuAngle = segmentMeanHeading(p0.steps, p1.steps, p1.heading);
+    let offset = sheetAngle - imuAngle;
+    while (offset >  Math.PI) offset -= 2 * Math.PI;
+    while (offset < -Math.PI) offset += 2 * Math.PI;
+    state.rotationOffset = offset;
+    rotUpdated = true;
+    break;
+  }
+
+  // pxPerStep averages over the LAST 3 VALID legs (skipping short noisy ones).
+  let totalDist = 0, totalSteps = 0, validLegs = 0;
+  for (let i = numPairs - 1; i >= 0 && validLegs < 3; i--) {
+    const p0 = a[i], p1 = a[i+1];
+    const steps = p1.steps - p0.steps;
+    if (steps < MIN_LEG_STEPS_FOR_CAL) continue;
+    totalDist += Math.hypot(p1.x - p0.x, p1.y - p0.y);
+    totalSteps += steps;
+    validLegs++;
+  }
+  if (totalSteps > 0) state.pxPerStep = totalDist / totalSteps;
+  state._lastCalibUpdate = { rotUpdated, validLegs };
+
+  state.calibrated = true;
+  state.currentPos = { x: a[a.length-1].x, y: a[a.length-1].y };
+  state.path = [{ x: state.currentPos.x, y: state.currentPos.y }];
+}
+
+// ---------- View transforms ----------
+function applyView() {
+  const wrap = dom.wrap.getBoundingClientRect();
+  if (!state.sheetW) { draw(); return; }
+  const tx = wrap.width / 2 + view.panX - state.sheetW / 2;
+  const ty = wrap.height / 2 + view.panY - state.sheetH / 2;
+  dom.sheet.style.width = state.sheetW + 'px';
+  dom.sheet.style.height = state.sheetH + 'px';
+  dom.sheet.style.transform = `translate(${tx}px, ${ty}px) rotate(${view.rotation}rad) scale(${view.scale})`;
+  dom.overlay.width = wrap.width;
+  dom.overlay.height = wrap.height;
+  draw();
+}
+
+function fitToScreen() {
+  const wrap = dom.wrap.getBoundingClientRect();
+  if (!state.sheetW) return;
+  const s = Math.min(wrap.width / state.sheetW, wrap.height / state.sheetH);
+  view.scale = s;
+  view.panX = 0;
+  view.panY = 0;
+  applyView();
+}
+
+// Continuously-running follow loop: every animation frame, lerp the pan
+// toward the current position. Because the loop runs at 60fps independent of
+// step events, the view glides smoothly — a step that shifts the target by a
+// few pixels is absorbed across many frames instead of triggering a discrete
+// animation. This is what the user reads as "smooth" vs the previous
+// per-step ease-out which still looked like discrete jumps.
+let followRaf = null;
+const FOLLOW_LERP = 0.12;   // 12% of remaining error per frame → ~90% in ~17 frames (~280ms at 60fps)
+const FOLLOW_SNAP_PX = 0.3; // skip drawing when within this many screen pixels of target
+
+function followTargetPan() {
+  if (!state.currentPos || !state.sheetW) return null;
+  const cx = state.sheetW / 2, cy = state.sheetH / 2;
+  const dx = state.currentPos.x - cx, dy = state.currentPos.y - cy;
+  const c = Math.cos(view.rotation), s = Math.sin(view.rotation);
+  return {
+    x: -(dx * c - dy * s) * view.scale,
+    y: -(dx * s + dy * c) * view.scale,
+  };
+}
+
+function followFrame() {
+  followRaf = null;
+  if (!state.followMode && !state.headingUpMode) return;
+
+  let dirty = false;
+
+  // Heading-up: rotate the sheet so the user's direction-of-travel points up
+  // on screen. We use walkingHeading when PCA is confident, else compass-fused
+  // heading. The rotation lerps each frame, so the sheet glides instead of
+  // snapping when heading changes.
+  if (state.headingUpMode && state.calibrated && state.headingHasSample) {
+    const headingDeg = state.walkingHeading != null ? state.walkingHeading : state.heading;
+    const imgAngle = headingDeg * Math.PI / 180 + state.rotationOffset;
+    // We want imgAngle + view.rotation = -π/2 (screen-up is -y).
+    const targetRot = -Math.PI / 2 - imgAngle;
+    let dr = targetRot - view.rotation;
+    // Wrap to [-π, π] so we always take the shortest rotational path.
+    while (dr > Math.PI) dr -= 2 * Math.PI;
+    while (dr < -Math.PI) dr += 2 * Math.PI;
+    if (Math.abs(dr) > 0.001) {
+      view.rotation += dr * HEADING_UP_LERP;
+      dirty = true;
+    }
+  }
+
+  if (state.followMode) {
+    const tgt = followTargetPan();
+    if (tgt) {
+      const errX = tgt.x - view.panX;
+      const errY = tgt.y - view.panY;
+      if (Math.abs(errX) > FOLLOW_SNAP_PX || Math.abs(errY) > FOLLOW_SNAP_PX) {
+        view.panX += errX * FOLLOW_LERP;
+        view.panY += errY * FOLLOW_LERP;
+        dirty = true;
+      }
+    }
+  }
+
+  if (dirty) applyView();
+  // Keep the loop alive while follow/heading-up is on so future target shifts
+  // (steps, manual rotate/zoom) are absorbed seamlessly.
+  followRaf = requestAnimationFrame(followFrame);
+}
+
+function startFollowLoop() {
+  if (followRaf) return;
+  followRaf = requestAnimationFrame(followFrame);
+}
+
+function stopFollowLoop() {
+  if (followRaf) cancelAnimationFrame(followRaf);
+  followRaf = null;
+}
+
+// External callers (applyStep, handleTap, button handlers) call this whenever
+// the target may have moved. It's a no-op if follow isn't on.
+function centerOnCurrentPos() {
+  if (state.followMode) startFollowLoop();
+}
+
+function setFollow(on) {
+  state.followMode = !!on;
+  dom.followBtn.classList.toggle('active', state.followMode);
+  if (state.followMode) startFollowLoop();
+  else if (!state.headingUpMode) stopFollowLoop();
+}
+
+function setHeadingUp(on) {
+  state.headingUpMode = !!on;
+  dom.headingUpBtn.classList.toggle('active', state.headingUpMode);
+  if (state.headingUpMode) startFollowLoop();
+  else if (!state.followMode) stopFollowLoop();
+}
+
+function imageToScreen(ix, iy) {
+  const wrap = dom.wrap.getBoundingClientRect();
+  const cx = state.sheetW / 2, cy = state.sheetH / 2;
+  const dx = ix - cx, dy = iy - cy;
+  const c = Math.cos(view.rotation), s = Math.sin(view.rotation);
+  const rx = dx * c - dy * s;
+  const ry = dx * s + dy * c;
+  return {
+    x: rx * view.scale + wrap.width / 2 + view.panX,
+    y: ry * view.scale + wrap.height / 2 + view.panY,
+  };
+}
+
+function screenToImage(sx, sy) {
+  const wrap = dom.wrap.getBoundingClientRect();
+  const cx = state.sheetW / 2, cy = state.sheetH / 2;
+  const dx = (sx - wrap.width / 2 - view.panX) / view.scale;
+  const dy = (sy - wrap.height / 2 - view.panY) / view.scale;
+  const c = Math.cos(-view.rotation), s = Math.sin(-view.rotation);
+  return { x: dx * c - dy * s + cx, y: dx * s + dy * c + cy };
+}
+
+window.addEventListener('resize', () => { if (state.imgLoaded) applyView(); });
+
+// ---------- Gesture handlers ----------
+let pointers = new Map();
+let dragStart = null;
+let pinchStart = null;
+let didDrag = false;
+
+function pointerDown(e) {
+  // Ignore taps that started on a button/input inside the canvas wrap — otherwise
+  // tapping an action button would also register as a sheet tap and drop a phantom pin.
+  if (e.target && e.target.closest && e.target.closest('button, input')) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 1) {
+    dragStart = { x: e.clientX, y: e.clientY, panX: view.panX, panY: view.panY };
+    didDrag = false;
+  } else if (pointers.size === 2) {
+    const [a, b] = [...pointers.values()];
+    const rect = dom.wrap.getBoundingClientRect();
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    pinchStart = {
+      dist: Math.hypot(b.x - a.x, b.y - a.y),
+      angle: Math.atan2(b.y - a.y, b.x - a.x),
+      cx, cy,
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      scale: view.scale,
+      rotation: view.rotation,
+      panX: view.panX,
+      panY: view.panY,
+      // Pin the image point under the original midpoint to the moving midpoint
+      imgAnchor: screenToImage(cx - rect.left, cy - rect.top),
+    };
+    dragStart = null;
+  }
+  dom.wrap.setPointerCapture(e.pointerId);
+}
+
+function pointerMove(e) {
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+
+  if (pointers.size === 2 && pinchStart) {
+    // Pinch overrides view — disable follow and heading-up so the loops don't
+    // fight the user's gesture.
+    if (state.followMode) {
+      state.followMode = false;
+      dom.followBtn.classList.remove('active');
+    }
+    if (state.headingUpMode) {
+      state.headingUpMode = false;
+      dom.headingUpBtn.classList.remove('active');
+    }
+    const [a, b] = [...pointers.values()];
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    const angle = Math.atan2(b.y - a.y, b.x - a.x);
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+
+    view.scale = pinchStart.scale * (dist / pinchStart.dist);
+    view.rotation = pinchStart.rotation + (angle - pinchStart.angle);
+
+    // Re-anchor the original image point to the current finger midpoint
+    const localCx = cx - pinchStart.rectLeft;
+    const localCy = cy - pinchStart.rectTop;
+    view.panX = 0; view.panY = 0;
+    const baseScreen = imageToScreen(pinchStart.imgAnchor.x, pinchStart.imgAnchor.y);
+    view.panX = localCx - baseScreen.x;
+    view.panY = localCy - baseScreen.y;
+
+    didDrag = true;
+    applyView();
+  } else if (pointers.size === 1 && dragStart) {
+    const dx = e.clientX - dragStart.x;
+    const dy = e.clientY - dragStart.y;
+    if (Math.hypot(dx, dy) > TAP_THRESHOLD_PX) {
+      // Any manual drag turns follow-mode off so the user can freely look around.
+      if (state.followMode) {
+        state.followMode = false;
+        dom.followBtn.classList.remove('active');
+      }
+      didDrag = true;
+      view.panX = dragStart.panX + dx;
+      view.panY = dragStart.panY + dy;
+      applyView();
+    }
+  }
+  dom.wrap.classList.toggle('dragging', didDrag);
+}
+
+function pointerUp(e) {
+  const startedAt = pointers.get(e.pointerId);
+  pointers.delete(e.pointerId);
+
+  if (pointers.size === 0) {
+    if (!didDrag && startedAt && state.imgLoaded) {
+      handleTap(e.clientX, e.clientY);
+    }
+    dragStart = null;
+    pinchStart = null;
+    dom.wrap.classList.remove('dragging');
+  } else if (pointers.size === 1) {
+    const [p] = [...pointers.values()];
+    dragStart = { x: p.x, y: p.y, panX: view.panX, panY: view.panY };
+    pinchStart = null;
+  }
+}
+
+dom.wrap.addEventListener('pointerdown', pointerDown);
+dom.wrap.addEventListener('pointermove', pointerMove);
+dom.wrap.addEventListener('pointerup', pointerUp);
+dom.wrap.addEventListener('pointercancel', pointerUp);
+
+// Stop pointer events on overlay UI from bubbling to the canvas wrap (belt-and-suspenders
+// against the "tap a button → phantom issue gets pinned underneath" bug).
+['pointerdown', 'pointerup', 'pointermove', 'pointercancel', 'click'].forEach((ev) => {
+  const stop = (e) => e.stopPropagation();
+  dom.actions.addEventListener(ev, stop);
+  dom.pinHereBtn.addEventListener(ev, stop);
+  dom.photoBtn.addEventListener(ev, stop);
+});
+
+dom.wrap.addEventListener('wheel', (e) => {
+  if (!state.imgLoaded) return;
+  e.preventDefault();
+  const rect = dom.wrap.getBoundingClientRect();
+  const factor = Math.exp(-e.deltaY * 0.0015);
+  const imgPtBefore = screenToImage(e.clientX - rect.left, e.clientY - rect.top);
+  view.scale *= factor;
+  const imgPtScreenAfter = imageToScreen(imgPtBefore.x, imgPtBefore.y);
+  view.panX += (e.clientX - rect.left) - imgPtScreenAfter.x;
+  view.panY += (e.clientY - rect.top) - imgPtScreenAfter.y;
+  applyView();
+}, { passive: false });
+
+// ---------- Tap (after drag has been ruled out) ----------
+function handleTap(clientX, clientY) {
+  const rect = dom.wrap.getBoundingClientRect();
+  const pt = screenToImage(clientX - rect.left, clientY - rect.top);
+
+  if (state.mode === 'awaitAnchor') {
+    state.anchors.push({ x: pt.x, y: pt.y, steps: state.steps, heading: state.heading });
+    if (state.anchors.length >= MIN_ANCHORS_FOR_CAL) recomputeCalibration();
+    tlog('anchor', { phase: 'calibration', n: state.anchors.length, x: +pt.x.toFixed(1), y: +pt.y.toFixed(1), steps: state.steps, heading: +state.heading.toFixed(1), pxPerStep: +state.pxPerStep.toFixed(2), rotOffDeg: +(state.rotationOffset * 180 / Math.PI).toFixed(1), calibInfo: state._lastCalibUpdate });
+    state.currentPos = { x: pt.x, y: pt.y };
+    state.path.push({ x: pt.x, y: pt.y });
+    // v0.25: snap state.heading to the current raw compass reading so the
+    // upcoming leg's gyro integration starts from a fresh ground-truth seed.
+    if (state.rawHeading != null) state.heading = state.rawHeading;
+    state.stepHeading = state.heading;
+    state.stepHeadingHasSample = true;
+    if (state.followMode) centerOnCurrentPos();
+    updateUI();
+    draw();
+  } else if (state.mode === 'tracking') {
+    state.pins.push({ x: pt.x, y: pt.y, label: 'Issue #' + (state.pins.length + 1), createdAt: Date.now() });
+    updateUI();
+    draw();
+  } else if (state.mode === 'awaitReanchor') {
+    // Treat the correction as a new calibration anchor. The just-walked leg
+    // becomes the new ground truth for direction (rotationOffset reset to it).
+    state.anchors.push({ x: pt.x, y: pt.y, steps: state.steps, heading: state.heading });
+    recomputeCalibration();
+    tlog('anchor', { phase: 'reanchor', n: state.anchors.length, x: +pt.x.toFixed(1), y: +pt.y.toFixed(1), steps: state.steps, heading: +state.heading.toFixed(1), pxPerStep: +state.pxPerStep.toFixed(2), rotOffDeg: +(state.rotationOffset * 180 / Math.PI).toFixed(1), calibInfo: state._lastCalibUpdate });
+    // v0.25: snap state.heading to current raw compass — fresh seed for the
+    // next leg's gyro integration. Same logic as calibration-anchor tap.
+    if (state.rawHeading != null) state.heading = state.rawHeading;
+    state.stepHeading = state.heading;
+    state.stepHeadingHasSample = true;
+    setMode('tracking');
+  } else if (state.mode === 'awaitHeadingPoint') {
+    // User picked a landmark on the sheet; remember it so we can compute the
+    // compass-to-sheet offset once they point the phone at it.
+    state.headingTarget = { x: pt.x, y: pt.y };
+    setMode('awaitHeadingConfirm');
+  }
+}
+
+function confirmHeading() {
+  if (!state.headingTarget || !state.currentPos) { setMode('tracking'); return; }
+  const dx = state.headingTarget.x - state.currentPos.x;
+  const dy = state.headingTarget.y - state.currentPos.y;
+  if (Math.hypot(dx, dy) < 1) { setMode('tracking'); return; }
+  const sheetAngle = Math.atan2(dy, dx);
+  const imuAngle = state.heading * Math.PI / 180;
+  state.rotationOffset = sheetAngle - imuAngle;
+  state.headingTarget = null;
+  setMode('tracking');
+}
+
+// ---------- View buttons ----------
+function disableHeadingUpOnManualRotate() {
+  if (state.headingUpMode) setHeadingUp(false);
+}
+dom.fitBtn.addEventListener('click', () => { disableHeadingUpOnManualRotate(); view.rotation = 0; fitToScreen(); });
+dom.followBtn.addEventListener('click', () => setFollow(!state.followMode));
+dom.headingUpBtn.addEventListener('click', () => setHeadingUp(!state.headingUpMode));
+dom.flipDirBtn.addEventListener('click', () => {
+  state.walkingDirFlipped = !state.walkingDirFlipped;
+  dom.flipDirBtn.classList.toggle('active', state.walkingDirFlipped);
+  computeWalkingHeadingFromPCA();
+  draw();
+});
+dom.pcaToggleBtn.addEventListener('click', () => {
+  state.pcaEnabled = !state.pcaEnabled;
+  dom.pcaToggleBtn.classList.toggle('active', state.pcaEnabled);
+  updateUI();
+  draw();
+});
+dom.stepDownBtn.addEventListener('click', () => {
+  state.pxPerStep = Math.max(2, state.pxPerStep * 0.9);
+  updateUI(); draw();
+});
+dom.stepUpBtn.addEventListener('click', () => {
+  state.pxPerStep = state.pxPerStep * 1.1;
+  updateUI(); draw();
+});
+dom.backwardBtn.addEventListener('click', () => {
+  state.backwardWalking = !state.backwardWalking;
+  dom.backwardBtn.classList.toggle('active', state.backwardWalking);
+  tlog('backward-toggle', { on: state.backwardWalking });
+  updateUI();
+});
+
+dom.pinHereBtn.addEventListener('click', () => {
+  if (!state.currentPos || state.mode !== 'tracking') return;
+  state.pins.push({
+    x: state.currentPos.x,
+    y: state.currentPos.y,
+    label: 'Issue #' + (state.pins.length + 1),
+    createdAt: Date.now(),
+  });
+  updateUI();
+  draw();
+});
+
+// ---------- Camera / photo thumbnail ----------
+// Photos are downscaled to <= PHOTO_MAX_EDGE on the longest side and stored
+// as data URLs on the pin. In-memory only — refreshing the page clears them.
+const PHOTO_MAX_EDGE = 320;
+const photoImgCache = new Map(); // dataUrl → HTMLImageElement (decoded)
+
+dom.photoBtn.addEventListener('click', () => {
+  if (!state.currentPos || state.mode !== 'tracking') return;
+  dom.photoInput.click();
+});
+
+dom.photoInput.addEventListener('change', async (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (!f) return;
+  if (!state.currentPos || state.mode !== 'tracking') {
+    e.target.value = '';
+    return;
+  }
+  try {
+    const dataUrl = await readAndResizeImage(f, PHOTO_MAX_EDGE);
+    state.pins.push({
+      x: state.currentPos.x,
+      y: state.currentPos.y,
+      label: 'Issue #' + (state.pins.length + 1),
+      createdAt: Date.now(),
+      photo: dataUrl,
+    });
+    updateUI();
+    draw();
+  } catch (err) {
+    diag('Photo error: ' + (err && err.message || err), true);
+  }
+  e.target.value = '';
+});
+
+function readAndResizeImage(file, maxEdge) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error || new Error('read failed'));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('image decode failed'));
+      img.onload = () => {
+        const longest = Math.max(img.naturalWidth, img.naturalHeight);
+        if (longest <= maxEdge) { resolve(reader.result); return; }
+        const scale = maxEdge / longest;
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', 0.82));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function getPhotoImg(dataUrl) {
+  let img = photoImgCache.get(dataUrl);
+  if (img) return img;
+  img = new Image();
+  img.onload = () => draw();
+  img.src = dataUrl;
+  photoImgCache.set(dataUrl, img);
+  return img;
+}
+
+// ---------- Sheet loading ----------
+dom.fileInput.addEventListener('change', async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const isPdf = f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+  diag(`loading ${isPdf ? 'PDF' : 'image'}: ${f.name}`);
+  try {
+    if (isPdf) await loadPdf(f);
+    else await loadImage(f);
+    state.imgLoaded = true;
+    view.rotation = 0;
+    fitToScreen();
+    resetWalk();
+    setMode('awaitAnchor');
+    diag(`loaded ✓ ${state.sheetW}×${state.sheetH} · ${APP_VERSION}`);
+  } catch (err) {
+    diag('LOAD FAILED: ' + (err && err.message || err), true);
+    console.error(err);
+  }
+});
+
+function loadImage(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      state.sheetW = img.naturalWidth; state.sheetH = img.naturalHeight;
+      dom.sheet.width = state.sheetW; dom.sheet.height = state.sheetH;
+      sheetCtx.drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      resolve();
+    };
+    img.onerror = () => reject(new Error('image decode failed'));
+    img.src = url;
+  });
+}
+
+async function loadPdf(file) {
+  if (!window['pdfjsLib']) throw new Error('PDF.js not loaded');
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const page = await pdf.getPage(1);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const maxPx = 12_000_000;
+  let s = 1600 / baseViewport.width;
+  if ((baseViewport.width * s) * (baseViewport.height * s) > maxPx) {
+    s = Math.sqrt(maxPx / (baseViewport.width * baseViewport.height));
+  }
+  const viewport = page.getViewport({ scale: s });
+  dom.sheet.width = state.sheetW = Math.floor(viewport.width);
+  dom.sheet.height = state.sheetH = Math.floor(viewport.height);
+  sheetCtx.fillStyle = 'white';
+  sheetCtx.fillRect(0, 0, dom.sheet.width, dom.sheet.height);
+  await page.render({ canvasContext: sheetCtx, viewport }).promise;
+}
+
+// ---------- Drawing ----------
+function draw() {
+  if (!dom.overlay.width) return;
+  overlayCtx.clearRect(0, 0, dom.overlay.width, dom.overlay.height);
+
+  if (state.path.length >= 2) {
+    overlayCtx.strokeStyle = 'rgba(91,141,239,0.55)';
+    overlayCtx.lineWidth = 2;
+    overlayCtx.setLineDash([4, 4]);
+    overlayCtx.beginPath();
+    const p0 = imageToScreen(state.path[0].x, state.path[0].y);
+    overlayCtx.moveTo(p0.x, p0.y);
+    for (let i = 1; i < state.path.length; i++) {
+      const p = imageToScreen(state.path[i].x, state.path[i].y);
+      overlayCtx.lineTo(p.x, p.y);
+    }
+    overlayCtx.stroke();
+    overlayCtx.setLineDash([]);
+  }
+
+  state.anchors.forEach((a, i) => drawDot(a, '#22c55e', String(i + 1), 7));
+  state.pins.forEach((p) => drawPin(p, p.label, p.photo));
+
+  // Heading-calibration landmark + the implied line from current position
+  if (state.headingTarget && state.currentPos) {
+    const tgt = imageToScreen(state.headingTarget.x, state.headingTarget.y);
+    const cur = imageToScreen(state.currentPos.x, state.currentPos.y);
+    overlayCtx.strokeStyle = 'rgba(247,179,45,0.85)';
+    overlayCtx.lineWidth = 2;
+    overlayCtx.setLineDash([6, 4]);
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(cur.x, cur.y);
+    overlayCtx.lineTo(tgt.x, tgt.y);
+    overlayCtx.stroke();
+    overlayCtx.setLineDash([]);
+    drawDot(state.headingTarget, '#f7b32d', '🧭', 10);
+  }
+
+  if (state.currentPos) {
+    drawDot(state.currentPos, '#5b8def', '', 9);
+    const s = imageToScreen(state.currentPos.x, state.currentPos.y);
+    const imgAngle = state.heading * Math.PI / 180 + state.rotationOffset;
+    const screenAngle = imgAngle + view.rotation;
+    overlayCtx.strokeStyle = '#5b8def';
+    overlayCtx.lineWidth = 3;
+    overlayCtx.beginPath();
+    overlayCtx.moveTo(s.x, s.y);
+    overlayCtx.lineTo(s.x + Math.cos(screenAngle) * 28, s.y + Math.sin(screenAngle) * 28);
+    overlayCtx.stroke();
+  }
+}
+
+function drawDot(imgPt, color, label, radius) {
+  const p = imageToScreen(imgPt.x, imgPt.y);
+  const r = radius || 8;
+  overlayCtx.fillStyle = color;
+  overlayCtx.beginPath();
+  overlayCtx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  overlayCtx.fill();
+  overlayCtx.strokeStyle = 'white';
+  overlayCtx.lineWidth = 2;
+  overlayCtx.stroke();
+  if (label) {
+    overlayCtx.fillStyle = 'white';
+    overlayCtx.font = 'bold 11px -apple-system, sans-serif';
+    overlayCtx.textAlign = 'center';
+    overlayCtx.textBaseline = 'middle';
+    overlayCtx.fillText(label, p.x, p.y);
+  }
+}
+
+function drawPin(imgPt, label, photo) {
+  const p = imageToScreen(imgPt.x, imgPt.y);
+  overlayCtx.fillStyle = '#ef4444';
+  overlayCtx.strokeStyle = 'white';
+  overlayCtx.lineWidth = 2;
+  overlayCtx.beginPath();
+  overlayCtx.arc(p.x, p.y - 14, 11, 0, Math.PI * 2);
+  overlayCtx.fill();
+  overlayCtx.stroke();
+  overlayCtx.beginPath();
+  overlayCtx.moveTo(p.x - 6, p.y - 8);
+  overlayCtx.lineTo(p.x, p.y + 4);
+  overlayCtx.lineTo(p.x + 6, p.y - 8);
+  overlayCtx.closePath();
+  overlayCtx.fillStyle = '#ef4444';
+  overlayCtx.fill();
+  overlayCtx.stroke();
+  if (label) {
+    overlayCtx.fillStyle = 'white';
+    overlayCtx.strokeStyle = 'rgba(0,0,0,0.85)';
+    overlayCtx.lineWidth = 3;
+    overlayCtx.font = 'bold 11px -apple-system, sans-serif';
+    overlayCtx.textAlign = 'center';
+    overlayCtx.textBaseline = 'bottom';
+    overlayCtx.strokeText(label, p.x, p.y - 26);
+    overlayCtx.fillText(label, p.x, p.y - 26);
+  }
+
+  // Photo thumbnail sits to the upper-right of the pin so it doesn't cover the label.
+  if (photo) {
+    const img = getPhotoImg(photo);
+    if (img.complete && img.naturalWidth > 0) {
+      const tw = 48, th = 48;
+      const tx = p.x + 12;
+      const ty = p.y - 18 - th;
+      overlayCtx.fillStyle = 'white';
+      overlayCtx.fillRect(tx - 2, ty - 2, tw + 4, th + 4);
+      overlayCtx.drawImage(img, tx, ty, tw, th);
+      overlayCtx.strokeStyle = 'rgba(0,0,0,0.5)';
+      overlayCtx.lineWidth = 1;
+      overlayCtx.strokeRect(tx - 2, ty - 2, tw + 4, th + 4);
+    }
+  }
+}
+
+// ---------- Step + heading ----------
+function applyStep() {
+  state.steps++;
+  state.stepHeadings.push({ step: state.steps, heading: state.heading });
+  if (state.stepHeadings.length > 5000) state.stepHeadings.shift();
+
+  tlog('step', {
+    n: state.steps,
+    heading: +state.heading.toFixed(1),
+    stepHeading: +state.stepHeading.toFixed(1),
+    walkingHeading: state.walkingHeading != null ? +state.walkingHeading.toFixed(1) : null,
+    pcaEnabled: state.pcaEnabled,
+    headingUnstable: state.headingUnstable,
+    frozen: state.headingUnstable, // applyStep did NOT move the dot if this is true
+    pxPerStep: +state.pxPerStep.toFixed(2),
+    rotationOffsetDeg: +(state.rotationOffset * 180 / Math.PI).toFixed(1),
+    mode: state.mode,
+    pos: state.currentPos ? { x: +state.currentPos.x.toFixed(1), y: +state.currentPos.y.toFixed(1) } : null,
+    grav: state.gravityVec ? { x: +state.gravityVec.x.toFixed(2), y: +state.gravityVec.y.toFixed(2), z: +state.gravityVec.z.toFixed(2) } : null,
+  });
+  // Live-track even during calibration once we have 2+ anchors, so the user
+  // can see where the app thinks they are and either approve or correct.
+  const liveTracking =
+    (state.mode === 'tracking' ||
+     state.mode === 'awaitHeadingConfirm' ||
+     (state.mode === 'awaitAnchor' && state.calibrated));
+  if (liveTracking && state.currentPos) {
+    // SKIP position update if the heading is currently unstable (user turning,
+    // not walking). The step is still counted; we just don't move the dot in a
+    // hallucinated direction.
+    if (!state.headingUnstable) {
+      const useWalking = state.pcaEnabled && state.walkingHeading != null;
+      // For step direction, prefer the heavily-smoothed stepHeading over the
+      // responsive heading — drastically reduces compass-jitter zigzag.
+      let baseHeading = useWalking ? state.walkingHeading : state.stepHeading;
+      // Backward-walking override: user has asserted their body moves opposite
+      // to phone facing. Add 180° before projecting.
+      if (state.backwardWalking) baseHeading = (baseHeading + 180) % 360;
+      const angle = baseHeading * Math.PI / 180 + state.rotationOffset;
+      state.currentPos.x += Math.cos(angle) * state.pxPerStep;
+      state.currentPos.y += Math.sin(angle) * state.pxPerStep;
+      state.path.push({ x: state.currentPos.x, y: state.currentPos.y });
+      if (state.followMode) centerOnCurrentPos();
+    }
+  }
+  updateUI();
+  draw();
+}
+
+// ---------- Walking-direction inference (PCA of horizontal accel in world frame) ----------
+// We project linear acceleration onto the horizontal plane (perpendicular to
+// gravity), rotate into world frame using the compass-aligned device +Y axis,
+// and buffer the (east, north) samples. PCA of the buffer gives the dominant
+// axis of motion, which is the walking line — independent of which way the
+// phone is pointing. We then disambiguate the 180° flip by picking the side
+// closer to the current compass heading.
+
+function pushHorizontalAccelSample(lx, ly, lz) {
+  if (!state.gravityVec) return;
+  const gx = state.gravityVec.x, gy = state.gravityVec.y, gz = state.gravityVec.z;
+  const gMag = Math.hypot(gx, gy, gz);
+  if (gMag < 1) return;
+  const ghx = gx/gMag, ghy = gy/gMag, ghz = gz/gMag;
+
+  // Horizontal accel in device frame: linear − (linear·ĝ) ĝ.
+  const v = lx*ghx + ly*ghy + lz*ghz;
+  const hx = lx - v*ghx, hy = ly - v*ghy, hz = lz - v*ghz;
+  const hMag = Math.hypot(hx, hy, hz);
+  if (hMag < 0.05) return;
+
+  // Horizontal projection of device +Y axis (our reference for "where compass heading points").
+  const yhx = -ghx*ghy, yhy = 1 - ghy*ghy, yhz = -ghy*ghz;
+  const yhMag = Math.hypot(yhx, yhy, yhz);
+  if (yhMag < 0.2) return; // device +Y is too vertical; can't anchor a direction this frame
+
+  // Signed angle from y_h to h, measured clockwise when viewed from above (compass convention).
+  const dot = (hx*yhx + hy*yhy + hz*yhz) / (hMag * yhMag);
+  const crX = yhy*hz - yhz*hy;
+  const crY = yhz*hx - yhx*hz;
+  const crZ = yhx*hy - yhy*hx;
+  const det = (crX*ghx + crY*ghy + crZ*ghz);
+  const angleDevRad = Math.atan2(det, dot);
+
+  // Compass-style world angle of this horizontal-accel sample.
+  const worldDeg = (state.heading + angleDevRad * 180 / Math.PI + 360) % 360;
+  const worldRad = worldDeg * Math.PI / 180;
+  const east = hMag * Math.sin(worldRad);
+  const north = hMag * Math.cos(worldRad);
+
+  if (state.accelBuf.length < ACCEL_BUFFER_SIZE) {
+    state.accelBuf.push({ e: east, n: north });
+  } else {
+    state.accelBuf[state.accelBufIdx] = { e: east, n: north };
+    state.accelBufIdx = (state.accelBufIdx + 1) % ACCEL_BUFFER_SIZE;
+  }
+  state.accelBufFilled = Math.min(state.accelBufFilled + 1, ACCEL_BUFFER_SIZE);
+}
+
+function wrapDeg180(d) {
+  let x = ((d + 180) % 360) - 180;
+  if (x < -180) x += 360;
+  return x;
+}
+
+function computeWalkingHeadingFromPCA() {
+  const n = state.accelBufFilled;
+  if (n < PCA_MIN_SAMPLES) return;
+
+  let me = 0, mn = 0;
+  for (let i = 0; i < n; i++) { me += state.accelBuf[i].e; mn += state.accelBuf[i].n; }
+  me /= n; mn /= n;
+
+  let cee = 0, cnn = 0, cen = 0;
+  for (let i = 0; i < n; i++) {
+    const de = state.accelBuf[i].e - me, dn = state.accelBuf[i].n - mn;
+    cee += de*de; cnn += dn*dn; cen += de*dn;
+  }
+  cee /= n; cnn /= n; cen /= n;
+
+  const trace = cee + cnn;
+  const det = cee*cnn - cen*cen;
+  const disc = Math.sqrt(Math.max(0, trace*trace/4 - det));
+  const lambda1 = trace/2 + disc;
+  const lambda2 = trace/2 - disc;
+  if (lambda1 + lambda2 < 1e-6) return;
+  const ratio = lambda1 / (lambda1 + lambda2);
+  if (ratio < PCA_MIN_RATIO) return; // motion isn't directional enough — leave walkingHeading as-is
+
+  // Dominant eigenvector (the LINE of walking; sign is ambiguous).
+  let ve, vn;
+  if (Math.abs(cen) > 1e-6) {
+    ve = -cen;
+    vn = cee - lambda1;
+  } else {
+    ve = cee > cnn ? 1 : 0;
+    vn = cee > cnn ? 0 : 1;
+  }
+  const vLen = Math.hypot(ve, vn) || 1;
+  ve /= vLen; vn /= vLen;
+
+  // Forward/backward disambiguation. PCA only gives the line; we need to pick
+  // which end is "forward." Two signals available:
+  //   A) Skewness of projection onto the axis. Gait is asymmetric — heel-strike
+  //      is a sharper braking impulse than the push-off, so the projection
+  //      distribution has a tail in -walking-direction. Negative skewness ⇒
+  //      walking direction is along +(ve,vn).
+  //   B) Compass heading. Picks the candidate closer to the device-pointing
+  //      direction. Wrong when user holds the phone backward/sideways.
+  // Prefer skewness when strong; fall back to compass when skewness is weak.
+  let m2 = 0, m3 = 0;
+  for (let i = 0; i < n; i++) {
+    const de = state.accelBuf[i].e - me, dn = state.accelBuf[i].n - mn;
+    const proj = de * ve + dn * vn;
+    m2 += proj * proj;
+    m3 += proj * proj * proj;
+  }
+  const variance = m2 / n;
+  const stdDev = Math.sqrt(Math.max(1e-9, variance));
+  const skewness = (m3 / n) / (stdDev * stdDev * stdDev);
+
+  let flipAxis;
+  if (Math.abs(skewness) > SKEWNESS_TRUST_THRESHOLD) {
+    // Negative skewness ⇒ heel-strike braking tail is in -axis direction
+    // ⇒ walking direction is +axis ⇒ DON'T flip.
+    flipAxis = skewness > 0;
+  } else {
+    // Weak gait asymmetry — use compass to disambiguate.
+    let cand = Math.atan2(ve, vn) * 180 / Math.PI;
+    if (cand < 0) cand += 360;
+    const alt = (cand + 180) % 360;
+    const d1 = Math.abs(wrapDeg180(cand - state.heading));
+    const d2 = Math.abs(wrapDeg180(alt - state.heading));
+    flipAxis = (d2 < d1);
+  }
+  if (state.walkingDirFlipped) flipAxis = !flipAxis;
+
+  const finalVe = flipAxis ? -ve : ve;
+  const finalVn = flipAxis ? -vn : vn;
+  let final = Math.atan2(finalVe, finalVn) * 180 / Math.PI;
+  if (final < 0) final += 360;
+  state.walkingHeading = final;
+
+  tlog('pca', {
+    n,
+    lambda1: +lambda1.toFixed(3),
+    lambda2: +lambda2.toFixed(3),
+    ratio: +ratio.toFixed(3),
+    skew: +skewness.toFixed(3),
+    skewUsed: Math.abs(skewness) > SKEWNESS_TRUST_THRESHOLD,
+    walking: +final.toFixed(1),
+    heading: +state.heading.toFixed(1),
+    flipped: state.walkingDirFlipped,
+  });
+}
+
+function onMotion(e) {
+  const a = e.accelerationIncludingGravity || e.acceleration;
+  if (!a) return;
+  const ax = a.x || 0, ay = a.y || 0, az = a.z || 0;
+
+  // 1) Estimate gravity in device frame by low-passing the total acceleration.
+  if (!state.gravityVec) {
+    state.gravityVec = { x: ax, y: ay, z: az };
+  } else {
+    const k = 1 - GRAVITY_LP_ALPHA;
+    state.gravityVec.x = state.gravityVec.x * k + ax * GRAVITY_LP_ALPHA;
+    state.gravityVec.y = state.gravityVec.y * k + ay * GRAVITY_LP_ALPHA;
+    state.gravityVec.z = state.gravityVec.z * k + az * GRAVITY_LP_ALPHA;
+  }
+
+  // 2) Linear acceleration = total − gravity.
+  const lx = ax - state.gravityVec.x;
+  const ly = ay - state.gravityVec.y;
+  const lz = az - state.gravityVec.z;
+
+  // 3) Project linear accel onto gravity direction → vertical component in world frame.
+  // (Lateral phone swinging is perpendicular to gravity → near-zero vertical component.)
+  const gMag = Math.hypot(state.gravityVec.x, state.gravityVec.y, state.gravityVec.z) || 1;
+  const vertical = (lx * state.gravityVec.x + ly * state.gravityVec.y + lz * state.gravityVec.z) / gMag;
+  state.verticalAccelSmoothed = state.verticalAccelSmoothed * (1 - VERTICAL_LP_ALPHA) + vertical * VERTICAL_LP_ALPHA;
+
+  const nowMs = Date.now();
+
+  // 4) Gyro integration — update fused heading between compass samples.
+  // Project the device-frame rotation rate onto the world-up axis (= -gravity dir)
+  // to get yaw rate. Sign-flipped because up = -gravity.
+  if (e.rotationRate && state.headingHasSample) {
+    const rb = e.rotationRate.beta  || 0; // around device X (deg/s on iOS)
+    const rg = e.rotationRate.gamma || 0; // around device Y
+    const ra = e.rotationRate.alpha || 0; // around device Z
+    const yawRate = -(rb * state.gravityVec.x + rg * state.gravityVec.y + ra * state.gravityVec.z) / gMag;
+
+    const adjustedYaw = yawRate - 0; // device orientation correction is already applied to compass; gyro is in device frame so leave as-is
+    // The "screen orientation" adjustment we apply to compass implicitly handles
+    // how the user perceives forward; for the integrated yaw we just need the
+    // delta between samples, which is orientation-agnostic.
+    if (state.lastMotionTimeMs != null) {
+      const dt = Math.min(0.2, (nowMs - state.lastMotionTimeMs) / 1000);
+      // Compass on iOS is clockwise-from-North; gyro yaw rate sign follows
+      // right-hand rule around up (counter-clockwise positive). Negate to match.
+      state.heading = (state.heading - adjustedYaw * dt + 360) % 360;
+    }
+  }
+  state.lastMotionTimeMs = nowMs;
+
+  // 5) Walking-direction inference: project linear accel onto WORLD horizontal
+  //    plane and PCA over a rolling buffer. The dominant axis = walking line.
+  if (state.headingHasSample) {
+    pushHorizontalAccelSample(lx, ly, lz);
+    if (++state.pcaCounter >= PCA_UPDATE_EVERY) {
+      state.pcaCounter = 0;
+      computeWalkingHeadingFromPCA();
+    }
+  }
+
+  // 6) Step detection (vertical impulse).
+  if (Math.abs(vertical - state.verticalAccelSmoothed) > STEP_PEAK_THRESHOLD &&
+      (nowMs - state.lastStepTime) > STEP_MIN_INTERVAL_MS) {
+    state.lastStepTime = nowMs;
+    applyStep();
+  }
+  const walkStr = state.walkingHeading != null ? ` · walk ${state.walkingHeading.toFixed(0)}°` : '';
+  dom.status.textContent = `vAcc ${vertical.toFixed(2)} · h ${state.heading.toFixed(0)}°${walkStr}`;
+}
+
+// Complementary filter: slowly pull the gyro-integrated heading toward the
+// compass on each orientation event. The gyro provides smoothness; the compass
+// provides a global reference so the integration doesn't drift forever.
+// v0.25: ALSO skip compass pull during tracking mode. Telemetry showed that
+// the compass reads materially different values at different physical points
+// on the floor (spatial magnetic variation from steel/electronics), so
+// continuous compass-pull during a walk drifts the dot's direction as the
+// user crosses zones. In tracking we rely on gyro integration (immune to
+// magnetic fields, accurate over ~30s walks). Compass only seeds state.heading
+// at anchor placement and during calibration mode.
+function smoothHeading(rawDeg) {
+  if (!state.headingHasSample) {
+    state.heading = rawDeg; state.headingHasSample = true; return;
+  }
+  if (state.compassBad) return;          // detected bad compass — gyro carries
+  if (state.mode === 'tracking') return; // gyro-locked during tracking (v0.25)
+  let delta = ((rawDeg - state.heading + 540) % 360) - 180;
+  delta = Math.max(-COMPASS_PULL_MAX_DEG, Math.min(COMPASS_PULL_MAX_DEG, delta * COMPASS_PULL_ALPHA));
+  state.heading = (state.heading + delta + 360) % 360;
+}
+
+// Compass-bad flag based on the MAX sample-to-sample jump in the recent window.
+// Office telemetry showed individual jumps of 50–147° caused by environmental
+// magnetic interference (steel, electronics). Direct jump detection matches
+// what actually breaks dead-reckoning. Hysteresis + a time-based hold prevent
+// flicker and prevent re-trusting compass during a brief calm window in an
+// otherwise magnetically-bad room.
+function updateCompassQuality(rawDeg) {
+  const now = Date.now();
+  state.recentRawCompass.push(rawDeg);
+  if (state.recentRawCompass.length > COMPASS_QUALITY_WINDOW) state.recentRawCompass.shift();
+  if (state.recentRawCompass.length < 2) return;
+  // Max wrap-aware jump between consecutive samples.
+  let maxJump = 0;
+  for (let i = 1; i < state.recentRawCompass.length; i++) {
+    const d = ((state.recentRawCompass[i] - state.recentRawCompass[i-1] + 540) % 360) - 180;
+    const abs = Math.abs(d);
+    if (abs > maxJump) maxJump = abs;
+  }
+  state._lastMaxJump = maxJump;
+  if (maxJump > COMPASS_JUMP_BAD) {
+    // Any single bad jump in the window flags us, and extends the hold.
+    state.compassBad = true;
+    state.compassBadUntilMs = now + COMPASS_BAD_HOLD_MS;
+  } else if (state.compassBad && now > state.compassBadUntilMs && maxJump < COMPASS_JUMP_GOOD) {
+    // Only release if hold elapsed AND window is quiet.
+    state.compassBad = false;
+  }
+}
+
+// Adjustment for how the user is holding the phone. webkitCompassHeading reports
+// the direction the device's PHYSICAL top edge points — so if the user rotates the
+// phone into landscape, "forward" is now a side edge, not the physical top.
+// window.orientation: 0 (portrait), 90 (landscape, home on left), -90 (landscape,
+// home on right), 180 (upside-down). screen.orientation.angle is the standards
+// equivalent (always positive 0/90/180/270). Both are mapped to the same offset.
+function getDeviceOrientationOffset() {
+  if (typeof window.orientation === 'number') return window.orientation;
+  if (screen.orientation && typeof screen.orientation.angle === 'number') {
+    const a = screen.orientation.angle;
+    if (a === 90) return -90;
+    if (a === 270) return 90;
+    return a; // 0 or 180
+  }
+  return 0;
+}
+
+let lastHeadingTelemetryMs = 0;
+function onOrientation(e) {
+  let h = e.webkitCompassHeading != null ? e.webkitCompassHeading : (e.alpha != null ? (360 - e.alpha) : null);
+  if (h == null) return;
+  // Subtract device orientation so the heading reflects the direction of the
+  // screen's "up" edge as the user sees it, regardless of how they hold the phone.
+  h = (h - getDeviceOrientationOffset() + 360) % 360;
+  state.rawHeading = h;
+  // Update compass-quality flag FIRST so smoothHeading can honor it this cycle.
+  updateCompassQuality(h);
+  smoothHeading(h);
+
+  // Push to history first so rate computation reflects the just-arrived sample.
+  const nowMs = Date.now();
+  state.headingHistory.push({ t: nowMs, heading: state.heading });
+  const cutoff = nowMs - TURN_WINDOW_MS;
+  while (state.headingHistory.length > 1 && state.headingHistory[0].t < cutoff) {
+    state.headingHistory.shift();
+  }
+
+  // Compute net compass rate (°/s) once — used for BOTH adaptive step-heading
+  // smoothing AND turn-freeze detection.
+  let netRate = 0;
+  if (state.headingHistory.length >= 4) {
+    const first = state.headingHistory[0];
+    const last = state.headingHistory[state.headingHistory.length - 1];
+    const netDelta = ((last.heading - first.heading + 540) % 360) - 180;
+    const span = (last.t - first.t) / 1000;
+    netRate = span > 0 ? Math.abs(netDelta) / span : 0;
+  }
+
+  // Adaptive step-heading: alpha scales linearly from SLOW (stable) to FAST
+  // (rotating) based on netRate. This replaces the v0.19 fixed-α + aggressive
+  // freeze approach. The smoothing self-tunes to whether you're walking or
+  // turning, so we don't need to gate steps.
+  const t01 = Math.max(0, Math.min(1,
+    (netRate - STEP_HEADING_RATE_LOW) / (STEP_HEADING_RATE_HIGH - STEP_HEADING_RATE_LOW)));
+  const stepAlpha = STEP_HEADING_ALPHA_SLOW + t01 * (STEP_HEADING_ALPHA_FAST - STEP_HEADING_ALPHA_SLOW);
+  if (!state.stepHeadingHasSample) {
+    state.stepHeading = state.heading;
+    state.stepHeadingHasSample = true;
+  } else {
+    const d = ((state.heading - state.stepHeading + 540) % 360) - 180;
+    state.stepHeading = (state.stepHeading + d * stepAlpha + 360) % 360;
+  }
+
+  if (state.headingHistory.length >= 4) {
+    // netRate already computed above for adaptive step-heading; reuse here.
+    const wasUnstable = state.headingUnstable;
+    if (!wasUnstable) {
+      // Enter freeze when rate crosses the upper threshold.
+      if (netRate > TURN_RATE_THRESHOLD) state.headingUnstable = true;
+    } else {
+      // Exit freeze only after the rate stays below the lower threshold for
+      // UNFREEZE_HOLD_MS — prevents chatter during a long noisy turn.
+      if (netRate < UNFREEZE_RATE) {
+        if (state.unfreezeCandidateSinceMs === 0) state.unfreezeCandidateSinceMs = nowMs;
+        else if (nowMs - state.unfreezeCandidateSinceMs >= UNFREEZE_HOLD_MS) {
+          state.headingUnstable = false;
+          state.unfreezeCandidateSinceMs = 0;
+        }
+      } else {
+        state.unfreezeCandidateSinceMs = 0; // rate climbed back, restart hold timer
+      }
+    }
+    // SNAP stepHeading to current compass on the freeze→unfreeze transition.
+    // This is the big v0.25 fix: after a turn, projection should use the new
+    // direction immediately instead of slow-converging over ~8 seconds and
+    // dragging the dot 30° off course.
+    if (wasUnstable && !state.headingUnstable) {
+      state.stepHeading = state.heading;
+      tlog('unfreeze-snap', { stepHeading: +state.stepHeading.toFixed(1), rate: +netRate.toFixed(1) });
+    }
+  }
+
+  dom.heading.textContent = state.heading.toFixed(0);
+
+  // 1 Hz sample of the heading for telemetry — enough to see drift without flooding the log.
+  if (nowMs - lastHeadingTelemetryMs > 1000) {
+    lastHeadingTelemetryMs = nowMs;
+    tlog('heading', {
+      raw: +h.toFixed(1),
+      smoothed: +state.heading.toFixed(1),
+      stepH: +state.stepHeading.toFixed(1),
+      stepAlpha: +stepAlpha.toFixed(3),
+      netRate: +netRate.toFixed(1),
+      unstable: state.headingUnstable,
+      compassBad: state.compassBad,
+      compassMaxJump: state._lastMaxJump != null ? +state._lastMaxJump.toFixed(1) : null,
+      orient: getDeviceOrientationOffset(),
+    });
+  }
+  draw();
+}
+
+dom.permBtn.addEventListener('click', async () => {
+  try {
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      const r = await DeviceMotionEvent.requestPermission();
+      if (r !== 'granted') throw new Error('motion denied');
+    }
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      const r = await DeviceOrientationEvent.requestPermission();
+      if (r !== 'granted') throw new Error('orientation denied');
+    }
+    window.addEventListener('devicemotion', onMotion);
+    window.addEventListener('deviceorientation', onOrientation);
+    dom.permBtn.textContent = 'Motion ON';
+    dom.permBtn.disabled = true;
+  } catch (err) {
+    alert('Sensor permission denied: ' + err.message + '\n\nOn desktop, use Spacebar (step) and ←/→ (heading).');
+  }
+});
+
+window.addEventListener('devicemotion', onMotion);
+window.addEventListener('deviceorientation', onOrientation);
+
+// Desktop sim
+window.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON')) return;
+  if (e.code === 'Space') { applyStep(); e.preventDefault(); }
+  else if (e.code === 'ArrowLeft') { state.heading = (state.heading - 10 + 360) % 360; updateUI(); draw(); }
+  else if (e.code === 'ArrowRight') { state.heading = (state.heading + 10) % 360; updateUI(); draw(); }
+});
+
+// ---------- Reset ----------
+function resetWalk() {
+  state.anchors = []; state.pins = []; state.currentPos = null;
+  state.path = []; state.steps = 0; state.calibrated = false;
+  state.pxPerStep = DEFAULT_STEP_PX; state.rotationOffset = 0;
+  state.stepHeadings = [];
+  state.headingTarget = null;
+  state.accelBuf = []; state.accelBufIdx = 0; state.accelBufFilled = 0;
+  state.pcaCounter = 0; state.walkingHeading = null;
+  state.stepHeadingHasSample = false; state.stepHeading = 0;
+  state.headingHistory = []; state.headingUnstable = false;
+  state.unfreezeCandidateSinceMs = 0;
+  state.recentRawCompass = []; state.compassBad = false; state.compassBadUntilMs = 0;
+  if (state.imgLoaded) setMode('awaitAnchor');
+  else setMode('idle');
+}
+dom.resetBtn.addEventListener('click', resetWalk);
+
+updateUI();
+dom.followBtn.classList.toggle('active', state.followMode);
+dom.headingUpBtn.classList.toggle('active', state.headingUpMode);
+dom.pcaToggleBtn.classList.toggle('active', state.pcaEnabled);
+tlog('session', { ua: navigator.userAgent, vw: innerWidth, vh: innerHeight });
+</script>
+</body>
+</html>
