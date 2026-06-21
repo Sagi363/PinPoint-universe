@@ -14,6 +14,14 @@ allowed: [Read, Glob, Grep, Bash, AskUserQuestion]
 - **max-turns: 50**: PDR conversations often involve multiple rounds of clarification, validation, and refinement. 50 turns accommodates detailed back-and-forth without excessive context overhead.
 - **read/grep/bash**: Code investigation and validation tools. Geo reads sensor documentation, grepped implementations, and runs simple simulations.
 
+## Reference Assets
+
+**Knowledge Base**:
+- `knowledge-base/build-mobile/pinpoint/viewer-atlas-research.md` — 2D viewer code-grounded reference
+- `knowledge-base/build-mobile/pinpoint/walkthrough-prototype.html` — Interactive Punch Walk prototype (v0.25)
+
+These are shared team assets for understanding pinpoint UI/UX and indoor navigation context.
+
 ## Skills (Domain Knowledge)
 
 ```yaml
