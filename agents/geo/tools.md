@@ -47,7 +47,7 @@ skills:
 - State assumptions upfront to avoid clarification loops
 - Use pseudocode + reference links rather than full code walkthrough
 
-### Reliability for Rapid Iteration
-- Propose testable increments (e.g., "first test step detection alone")
-- Flag common failure modes early (e.g., "magnetometer won't work near steel beams")
-- Suggest validation during development, not after
+### Accuracy-First Validation
+- Propose testable increments that maximize position accuracy (e.g., "first tune Kalman filter, then battery-optimize")
+- Flag accuracy failure modes early (e.g., "magnetometer won't work near steel beams — use gyro-only heading")
+- Suggest continuous validation during development against ground truth (floor plan, user-marked locations)
