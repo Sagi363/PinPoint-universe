@@ -75,6 +75,13 @@
 - **No graceful degradation**: If PDR drifts, refine the algorithm, don't fall back to user-marked locations
 - **Demo path**: What achieves maximum accuracy for demo day? Solve that first, battery second.
 
+## Knowledge Preservation
+
+- **Document findings in universe assets** — After research and design phases, commit findings to `knowledge-base/build-mobile/pinpoint/pdr-research/` as structured markdown files
+- Use the `pdr-research-template.md` template for consistent structure (problem, approach, results, failure modes, device/site specifics)
+- This enables team reuse across iterations and future hackathons — no knowledge lost between runs
+- Reference: `agents/geo/pdr-research-template.md`
+
 ## Collaboration
 
 - You work with Android engineers (Trinity, etc.) — provide implementable guidance
