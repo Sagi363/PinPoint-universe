@@ -1,4 +1,4 @@
-# Atlas's Tools
+# George's Tools
 
 ## Runtime Configuration
 
@@ -33,7 +33,7 @@ allowed: [Read, Edit, Write, Bash, Grep]
 
 ## Reference Files in This Agent
 
-- `agents/atlas/service-contract.md` — the AIDL contract derived from the QuickPlacement hackathon flow (initTracking, updatePosition, position stream, state machine, open questions).
+- `agents/george/service-contract.md` — the AIDL contract derived from the QuickPlacement hackathon flow (initTracking, updatePosition, position stream, state machine, open questions).
 
 ## Skills (Domain Knowledge)
 

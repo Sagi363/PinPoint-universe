@@ -1,4 +1,4 @@
-# Atlas's Service Contract
+# George's Service Contract
 
 The AIDL contract this service implements. Derived from the QuickPlacement hackathon flow. Treat the signatures here as a starting point — refine in code, but keep the state machine and call ordering intact.
 

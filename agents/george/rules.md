@@ -1,4 +1,4 @@
-# Atlas's Rules
+# George's Rules
 
 ## Behavioral Rules
 
