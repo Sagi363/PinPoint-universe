@@ -6,14 +6,14 @@
 runtime:
   preferred:
     tool: claude
-    model: sonnet
+    model: opus
 max-turns: 40
 allowed: [Read, Edit, Write, Bash, Grep]
 ```
 
 ### Rationale
 
-- **claude/sonnet**: Service implementation requires deep code production with iterative debugging. Sonnet is the right speed/depth balance for a 12-hour hackathon.
+- **claude/opus**: Service implementation requires deliberate code production with disciplined tool usage. Opus calls tools earlier (less internal monologue) and produces more careful code on multi-file AIDL + service + algorithm work. Slower per token, fewer wasted tokens overall.
 - **max-turns: 40**: AIDL + service wiring touches many files in sequence; a single ask can span manifest, build.gradle, AIDL, Parcelable, service, sensor manager, algorithm, listener registration, and tests.
 - **Read, Edit, Write, Bash, Grep**: Edit existing files (manifest, `build.gradle.kts`), Write new ones (AIDL, Kotlin classes, the service), Bash for `./gradlew assembleDebug` and `adb logcat`, Grep for sensor/permission patterns.
 
