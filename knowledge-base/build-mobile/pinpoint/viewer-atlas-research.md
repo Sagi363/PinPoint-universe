@@ -572,6 +572,374 @@ These all hint that the **pin write path and viewable-load path** are the hot sp
 
 ---
 
+## 9.5 — Walk-mode coordinate-space & snapshot reference (Section I)
+
+> Persisted 2026-06-23 from the walk-mode POC. Read this BEFORE touching any
+> overlay layer, the SAW snapshot path, or any code that reads/writes
+> `tileView.scale` programmatically. Every claim has a `file:line` citation —
+> open the file before you doubt it.
+
+### 9.5.1 — The five coordinate spaces
+
+The Section 4 diagram listed four spaces (sheet-px → view-px → window, plus
+AV2F-unit). The walk-mode POC made a fifth one explicit because forgetting it
+is the failure mode for every overlay-view author.
+
+```
+sheet-px (file space)
+  └─ × qozixScale (sheetView.scale) ───────────────► scaled-content-px
+       (qozix lays out CHILDREN of ZoomPanLayout in this space —
+        V2AnnotationView and WalkModeViewerOverlayView are children)
+  └─ via SheetCoordinateMapper.sheetToView ────────► view-px (viewport)
+       (subtracts viewport.left/top + adds centering offset; this is the
+        space that the qozix PARENT canvas reaches the screen in after
+        the parent applies its scroll/pan)
+  └─ via View.getLocationOnScreen + rawX/rawY ─────► window-px
+sheet-px ÷ surfaceWidth ─────────────────────────► AV2F unit-space
+  (the on-wire annotation transform space; see Section 4)
+```
+
+Crucial rule of thumb (the one we kept relearning):
+
+- Children of `SheetView2` (a qozix `ZoomPanLayout`) draw on a canvas whose
+  CONTENT space is **scaled-content-px**. qozix's
+  `ZoomPanLayout.onLayout(...)` lays each child out at
+  `child.layout(mOffsetX, mOffsetY, mScaledWidth + mOffsetX, mScaledHeight + mOffsetY)`
+  (`android/tile-view/src/main/java/com/qozix/tileview/widgets/ZoomPanLayout.java:130-134`),
+  and the parent applies scroll/pan. So the child's local canvas already has
+  scroll/pan baked in — the only remaining transform a child layer needs is
+  the scale `sheet-px × qozixScale`. NO translation.
+- Anything that lives OUTSIDE `SheetView2` (notably the SAW
+  `WalkModePanView`, which is a top-level system-overlay window) is NOT in
+  scaled-content-px. It has to build its own sheet-px → overlay-px matrix
+  from scratch — see §9.5.4.
+
+### 9.5.2 — `SheetCoordinateMapper.viewToSheet` is scale-invariant by design
+
+The mapper is the canonical sheet ↔ view-px transform for the qozix host.
+It reads live qozix state on every call, so any tap converted through it is
+already correct at whatever zoom the user happens to be at.
+
+```kotlin
+// android/domain/src/main/java/com/plangrid/android/domain/helpers/SheetCoordinateMapper.kt:51-58
+fun viewToSheet(viewX: Float, viewY: Float): PointF {
+    val viewport: Rect = tileView.detailLevelManager.viewport
+    val scale: Float = tileView.scale
+    return PointF(
+        (viewX - getSheetXOffset(viewport, scale) + viewport.left) / scale,
+        (viewY - getSheetYOffset(viewport, scale) + viewport.top) / scale,
+    )
+}
+```
+
+`viewport` is the qozix scroll window —
+`(scrollX, scrollY, scrollX+W, scrollY+H)` updated every layout/scroll pass
+by `TileView.updateViewport()`:
+
+```java
+// android/tile-view/src/main/java/com/qozix/tileview/TileView.java:783-789
+protected void updateViewport() {
+    int left = getScrollX();
+    int top = getScrollY();
+    int right = left + getWidth();
+    int bottom = top + getHeight();
+    mDetailLevelManager.updateViewport( left, top, right, bottom );
+}
+```
+
+The centering branches `getSheetXOffset` / `getSheetYOffset`
+(`SheetCoordinateMapper.kt:26-36`) ONLY kick in when the scaled sheet is
+*narrower or shorter* than the viewport (i.e. fit-zoom-or-out). At any
+zoom-in level (the typical case) they collapse to `0f`. There is no
+zoom-specific branch in the mapper — it is one affine, parameterised by
+live state.
+
+**Existence proof at the canonical tap site**: the calibration tap reads
+`mapper.viewToSheet(e.x, e.y)` at `android/app/src/main/java/com/plangrid/android/sheets/AcsSheetFragment.kt:1617`,
+and the same mapper is used at `:2482` to feed
+`v2AnnotationView.onTouchEvent(event, sheetCoordinateMapper.toSheet(event))` —
+pins land correctly at any pinch-zoom level. Any "tap-at-zoom-X-looks-wrong"
+bug is NOT this mapper.
+
+### 9.5.3 — qozix `setScale()` does NOT request layout
+
+Load-bearing fact for the SAW snapshot dance. When something programmatically
+mutates the scale (e.g. the snapshot path), qozix does NOT re-run `onLayout`:
+
+```java
+// android/tile-view/src/main/java/com/qozix/tileview/widgets/ZoomPanLayout.java:241-251
+public void setScale( float scale ) {
+    scale = getConstrainedDestinationScale( scale );
+    if( mScale != scale ) {
+        float previous = mScale;
+        mScale = scale;
+        updateScaledDimensions();
+        constrainScrollToLimits();
+        onScaleChanged( scale, previous );   // notifies internal sublayouts only
+        invalidate();                        // schedule redraw — NO requestLayout()
+    }
+}
+```
+
+Consequences (every one of them bit us at least once during the POC):
+
+1. `onLayout` (`ZoomPanLayout.java:122-138`) does NOT re-run. The child
+   container keeps its previous layout rect: `(mOffsetX, mOffsetY,
+   mScaledWidth + mOffsetX, mScaledHeight + mOffsetY)` is stale, with
+   `mScaledWidth/Height` and `mOffsetX/Y` reflecting the PRE-mutate scale.
+2. `ZoomPanListener` callbacks do NOT fire for programmatic `setScale`.
+   Listener notification only happens through the animator's
+   `broadcastProgrammaticZoom{Begin,Update,End}` path. So
+   `V2AnnotationView` — which only learns about scale via Mobius's
+   `Action.ScaleUpdated` driven by `SheetView2.zoomPanStateSubject`
+   (which itself only emits from the ZoomPanListener) — does NOT see the
+   new scale.
+3. The `invalidate()` does schedule a redraw, and tile detail-level
+   recompute is dispatched, BUT tile load + decode is async. A synchronous
+   `sheetView.draw(canvas)` immediately after a `setScale(...)` is racing
+   against the tile pipeline. (This is exactly why the earlier
+   "always-zoom-out-on-entry" Approach C reverted — see Memory 2026-06-21.)
+
+If you mutate `tileView.setScale(...)` programmatically and need any layer
+that depends on Mobius scale state to follow, the host has to **republish
+the scale** itself (e.g. the earlier `onHostScaleProgrammaticallyChanged`
+hook that lived in the controller before A1+B1+C2+D2 — now removed because
+the snapshot path no longer mutates the user's scale).
+
+### 9.5.4 — SAW mini-window snapshot dance recipe (canonical)
+
+The SAW lives in its own `TYPE_APPLICATION_OVERLAY` window, so it cannot
+re-use the qozix child-canvas trick. It needs a synthetic `M_sheet_to_bitmap`
+and an opaque, full-sheet bitmap regardless of where the user is currently
+zoomed in the host. Recipe (post-fix, all citations into
+`android/app/src/main/java/com/plangrid/android/sheets/walkmode/WalkModeOverlayController.kt`):
+
+```kotlin
+// captureTileLayerSnapshot — :1733-1912 (excerpted)
+val widthBitmapPx = sheetView.width
+val heightBitmapPx = sheetView.height
+val tileViewForSnapshot = sheetView as? TileView
+val baseW = tileViewForSnapshot?.baseWidth ?: 0
+val baseH = tileViewForSnapshot?.baseHeight ?: 0
+val liveScale = tileViewForSnapshot?.scale ?: 1f
+val fitZoom = if (tileViewForSnapshot != null && baseW > 0 && baseH > 0) {
+    minOf(widthBitmapPx.toFloat() / baseW.toFloat(),
+          heightBitmapPx.toFloat() / baseH.toFloat())
+} else 1f
+
+val bitmap = Bitmap.createBitmap(widthBitmapPx, heightBitmapPx, ARGB_8888)
+bitmap.eraseColor(Color.WHITE)                            // :1785
+
+try {
+    val canvas = Canvas(bitmap)
+    annotationView?.visibility = View.INVISIBLE
+    viewerOverlay?.visibility = View.INVISIBLE
+    try {
+        if (applyFitZoomForSnapshot && tileViewSafe != null) {
+            tileViewSafe.setScale(fitZoom)                // :1813
+            tileViewSafe.scrollTo(0, 0)                   // :1814
+        }
+        sheetView.draw(canvas)                            // :1816
+    } finally {
+        if (applyFitZoomForSnapshot && tileViewSafe != null) {
+            tileViewSafe.setScale(liveScale)              // :1820 restore
+            tileViewSafe.scrollTo(prevScrollX, prevScrollY)
+        }
+        annotationView.visibility = prevAnnotationVisibility
+        viewerOverlay.visibility = prevViewerVisibility
+    }
+} catch (t: Throwable) { bitmap.recycle(); return }
+
+// Synthetic matrix — pure scale, NO centering.                :1861-1871
+val sheetToBitmapMatrix = Matrix().apply { setScale(fitZoom, fitZoom) }
+```
+
+Why each step is the way it is:
+
+- **`eraseColor(Color.WHITE)`** (`:1785`) — ARGB_8888 default is
+  `0x00000000` (transparent black). `setScale(fitZoom) + scrollTo(0,0)`
+  draws the sheet TOP-LEFT in the bitmap with extent
+  `(baseW*fitZoom, baseH*fitZoom)`, which is smaller than the bitmap on at
+  least one axis. The unfilled right/bottom letterbox bands stay
+  transparent if you don't pre-clear. Then `WalkModePanView`'s
+  `bitmapPaint.isFilterBitmap = true`
+  (`android/app/src/main/java/com/plangrid/android/sheets/walkmode/WalkModePanView.kt:153-154`)
+  at `currentZoomOverlay = 2.5f` (`WalkModePanView.kt:129`) bilinear-smears
+  the alpha boundary across ~2.5 overlay-px, producing the "blurry
+  gradient" the user reported. Fill with opaque white = crisp paper +
+  uniform color for the filter to interpolate against.
+- **Temp `setScale(fitZoom) + scrollTo(0,0)`, then restore in `finally`**
+  (`:1812-1822`). Because of §9.5.3 the child container's layout rect
+  doesn't refresh — that's load-bearing for the matrix (next bullet).
+  Restore lives in `finally` so any draw exception cannot leave the host
+  in a bad scale.
+- **No centering offset in the matrix** (`:1861-1871`). Pre-mutate state:
+  user is interactively zoomed in (we only enter this branch when
+  `|liveScale - fitZoom| > 0.001`, so `liveScale > fitZoom`). Pre-mutate
+  `mScaledWidth ≥ width` ⇒ qozix had `mOffsetX = 0`
+  (`ZoomPanLayout.java:127`). After `setScale(fitZoom)`, `onLayout` does
+  NOT re-run (§9.5.3) — the child container stays at
+  `(0, 0, oldScaledW, oldScaledH)`. During the snapshot draw,
+  `TileCanvasViewGroup.onDraw` does `canvas.scale(fitZoom, fitZoom)` against
+  that stale rect, so tiles land in `(0, 0, baseW*fitZoom, baseH*fitZoom)`
+  in the bitmap. **No centering is produced by the draw.** Therefore the
+  matrix MUST also be pure `setScale(fitZoom, fitZoom)` with no centering
+  translate. Adding a `getSheetXOffset`-style centering term — which
+  `SheetCoordinateMapper.sheetToView` does — would shift the overlay
+  layers (user dot, cone, session pins) off the bitmap content. That was
+  the X-misalignment bug.
+- **`sheetView.draw(canvas)` is synchronous** (`:1816`). Tile detail level
+  recompute is async, but most of the time the fit-zoom detail level is
+  already cached and the bitmap renders sharply. If a future bug demands
+  it, post the call or hook the tile-loaded callback — but DON'T do it
+  speculatively (the Approach C revert burned us once already).
+
+### 9.5.5 — Single-source-of-truth invariant for `sheetToOverlayMatrix`
+
+The bitmap and the layers are TWO sets of pixels that have to agree on
+where every sheet-px lands in the overlay window. The bitmap was BUILT
+with one matrix (`sheetToBitmapMatrix`), and the layers (user dot, cone,
+session pins, trail) DRAW through another (`sheetToOverlayMatrix`
+composed inside `WalkModePanView.onDraw` from `sheetToBitmap` and
+`bitmapToOverlay = translate(pan) * scale(zoom)`).
+
+**Invariant**: the bitmap matrix and the layer matrix must be the same
+matrix (or factored composition of it). If you ever fork them — e.g.
+build the bitmap with one centering convention and feed the layers a
+matrix with a different one — the layers and the content disagree on
+offset by exactly the centering term. Symptom: dots-on-right,
+sheet-content-on-left (the X-misalignment we shipped a fix for in
+Memory 2026-06-19).
+
+Concrete encoding in code:
+
+- §9.5.4 builds `sheetToBitmapMatrix` exactly once
+  (`WalkModeOverlayController.kt:1861-1871`).
+- `WalkModePanView.setSnapshot(...)` stores that matrix verbatim and
+  composes `sheetToOverlayMatrix = bitmapToOverlay.preConcat(sheetToBitmap)`
+  per frame.
+- Layers receive `sheetToOverlayMatrix` as data (not as canvas state) via
+  `WalkModeOverlayLayer.draw(canvas, viewportOverlayPx, sheetToOverlayMatrix)`,
+  map their sheet-px anchors with `Matrix.mapPoints`, and draw at
+  FIXED overlay-px sizes — that's how the dot stays dot-sized while the
+  bitmap behind it zooms.
+
+### 9.5.6 — In-host overlay matrix rule (pure scale, no translation)
+
+The SAW mini-window is one rendering surface. There is a SECOND one — the
+in-host overlay drawn ON TOP of the live qozix sheet for the user to see
+"where am I" without opening the mini-window. That's
+`WalkModeViewerOverlayView`
+(`android/app/src/main/java/com/plangrid/android/sheets/walkmode/WalkModeViewerOverlayView.kt`).
+
+It is a CHILD of `SheetView2`. Its canvas is therefore in
+**scaled-content-px** (§9.5.1) — qozix has already applied scroll/pan to
+the parent canvas. The matrix it builds for its layers is:
+
+```kotlin
+// WalkModeViewerOverlayView.kt:143-147
+val origin = mapper.sheetToView(originScratch.apply { set(0f, 0f) }, false)
+val unitX  = mapper.sheetToView(unitXScratch.apply { set(1f, 0f) }, false)
+val qozixScale = unitX.x - origin.x
+sheetToViewMatrix.reset()
+sheetToViewMatrix.setScale(qozixScale, qozixScale)   // pure scale; NO translate
+```
+
+This mirrors `V2AnnotationView.drawNode` (`V2AnnotationView.kt:1841-1842`):
+
+```kotlin
+reusableMatrix.setValues(matrixValues)
+reusableMatrix.postScale(scale * surfaceWidth, scale * surfaceWidth)
+```
+
+— a pure scale composition, no translation. AV2F annotations and walk-mode
+in-host layers share this convention because they share the qozix-child
+canvas convention.
+
+**Anti-pattern**: do NOT call `SheetCoordinateMapper.sheetToView` and use
+the full output as the in-host overlay's anchor. The mapper subtracts
+`viewport.left/top` and adds the centering offset — values that are about
+to be re-applied by the qozix PARENT scroll/pan when the child canvas
+hits the screen. You'd be subtracting the parent's transform from a
+child's local coordinates → double-applied scroll/pan → drift. That's
+exactly the bug the comment at `WalkModeViewerOverlayView.kt:43-49`
+warns about. The clean trick used there is to sample the mapper at two
+points and take the *delta* — the viewport/offset terms are constant
+across the two samples and cancel, leaving just the scale.
+
+### 9.5.7 — "Workaround smell" heuristic
+
+When a workaround locks a free interaction ("always zoom out before
+entering walk-mode," "block user pan during snapshot," "force the user to
+fit-zoom first") to "fix coordinates," the real bug is almost never in
+the coordinate-conversion code. It is in a snapshot/render path that read
+stale state at a moment the coordinate code couldn't know about.
+
+The walk-mode POC accepted "always zoom out on entry" early on. The actual
+bug was the SAW snapshot: bitmap built from one matrix, layers fed
+another; mapper math was already correct. The fix landed when the
+snapshot matrix and the layer matrix were unified (§9.5.5) and the
+snapshot was made independent of live qozix state (§9.5.4).
+
+Smell list to watch for going forward:
+
+- "Always zoom out before X" — usually a snapshot/render bug.
+- "Block pan during X" — usually a render/event-consumption bug.
+- "Lock the user to fit-zoom" — usually the matrix the renderer uses
+  doesn't track the live mapper.
+- "Subtract this magic constant to make the dot land right" — usually a
+  single-source-of-truth violation.
+
+### 9.5.8 — Calibration capture surface — touch consumption
+
+Adjacent topic, lives in the same bug class as §9.5.7 because the
+original "can't pinch during calibration" was misdiagnosed as a mapper
+bug and the proposed fix was to lock zoom (an even bigger workaround).
+Real fix: a gesture-scoped multi-touch latch on the capture surface so
+single-pointer drags consume (block pan per UX choice C2) but a
+2+-pointer pinch falls through to qozix's `ScaleGestureDetector`:
+
+- qozix host:
+  `android/app/src/main/java/com/plangrid/android/sheets/AcsSheetFragment.kt:1672-1739`
+  (`captureView.setOnTouchListener { ... }` with a `gestureWentMultiTouch`
+  latch and `ACTION_POINTER_DOWN` switch-to-forward-to-tile).
+- PDF host:
+  `android/app/src/main/java/com/plangrid/android/pdf/MarkupsFileViewerFragment.kt:1207-1256`
+  (same FSM, but on `binding.fragmentTouchView.onInterceptTouchFn`).
+
+Single-tap-up still fires via the standard `GestureDetector.SimpleOnGestureListener`
+because the tap is detected from `ACTION_DOWN + ACTION_UP` and the latch
+only flips on `ACTION_POINTER_DOWN`. Returning `true` unconditionally
+from the capture surface is the bug — it eats the pinch before
+`ScaleGestureDetector` ever sees the second pointer
+(`ZoomPanLayout.java:529-534`).
+
+### 9.5.9 — PDR pipeline / pushpin projection are scale-invariant
+
+For completeness: the PDR step-integration and the temp-marker /
+session-pin projection helpers
+(`WalkModeOverlayController.kt:777` derives `sheetPxPerMeter` from
+`|P2-P1| / 3m` once at calibration tap #2, then never re-reads the
+mapper) operate in pure sheet-px. They do not consume live qozix scale
+or viewport. Zoom regressions cannot leak into them.
+
+### 9.5.10 — Bug class catalog (misdiagnoses we've seen)
+
+Quick triage table. When a walk-mode bug presents, match it to the class
+BEFORE proposing a fix.
+
+| Symptom | Wrong diagnosis | Actual class | Where to look |
+|---|---|---|---|
+| Tap at zoom X lands offset | "mapper math wrong" | event-consumption / wrong-host check | `mapper.viewToSheet` is correct (§9.5.2); check whether the gesture even reached the right view |
+| Dot on right, sheet on left | "qozix needs zoom out" | layer matrix ≠ bitmap matrix (§9.5.5) | `WalkModePanView.setSnapshot` matrix vs `sheetToBitmapMatrix` construction |
+| Blurry gradient at top-right of SAW | "render is low-res" | ARGB_8888 letterbox + `isFilterBitmap` alpha-edge smear (§9.5.4) | `bitmap.eraseColor(Color.WHITE)` before draw |
+| Snapshot has wrong content under dot at zoom 3× | "always zoom out before entry" | qozix programmatic `setScale` → stale layout → top-left draw + matrix that added centering (§9.5.3, §9.5.4) | `captureTileLayerSnapshot` matrix MUST be pure `setScale(fitZoom)` with NO centering translate |
+| Existing pin shifts in sheet-coords when toolbar tapped | "annotation cache stale" | `ZoomPanListener` does NOT fire for programmatic `setScale` (§9.5.3) — V2AnnotationView's Mobius scale stays stale | If you mutate `tileView.setScale`, republish the scale to listeners yourself |
+| Can't pinch during calibration | "mapper not scale-invariant" | capture surface returns `true` unconditionally and eats the gesture | §9.5.8 multi-touch latch |
+| Pin lands at ~11M sheet-px after walk-mode auto-attach | "wire payload broken" | bypassed `.toUnit(surfaceWidth)` — bypassed the established touch→Mobius→AV2F unit-space conversion | `FoundationExt.kt:9-13` is the boundary; new write paths MUST go through it |
+
+---
+
 ## 10. Open Questions / Things Atlas Should Verify In-Session
 
 1. **Surface UID derivation for auto-placed pins.** `ElephantAnnotationsOverlayPresenter.setupSurfaceUid` builds the surface UID from `(documentUid, viewableGuid)` AFTER the user opens the viewer (`Action.CreateSurfaceUidFromDocumentUidAndGuid`, line 224-228). Auto-placement may need to produce or look up a surface UID **without** opening the viewer first — verify whether `IssuePinRepository.create2DIssuePin` can accept a freshly minted SurfaceUid, or whether a surface row must already exist locally.
